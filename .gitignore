@@ -7,3 +7,6 @@ settings_local.py
 # Vim files
 *.swp
 *.swo
+
+# setup stuff
+*.egg-info/*
