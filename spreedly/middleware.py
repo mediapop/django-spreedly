@@ -6,6 +6,7 @@ from spreedly.models import Subscription
 import spreedly.settings as spreedly_settings
 
 class SpreedlyMiddleware(object):
+#TODO move to a decorator
     '''
     Checks if user is legible to use the website, i.e. has an active
     subscription.
