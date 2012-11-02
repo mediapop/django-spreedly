@@ -1,11 +1,9 @@
-from spreedly.pyspreedly.api import Client
-
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TestCase
-
-from models import Plan
-from functions import sync_plans
+from pyspreedly.api import Client
+from spreedly.functions import sync_plans
+from spreedly.models import Plan
 
 class TestSubscription(TestCase):
     def setUp(self):

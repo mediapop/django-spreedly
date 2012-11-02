@@ -5,7 +5,7 @@ from django.core.mail import send_mail
 from django.template.loader import render_to_string
 
 from spreedly.models import Plan, Subscription
-from spreedly.pyspreedly.api import Client
+from pyspreedly.api import Client
 from spreedly import signals
 import spreedly.settings as spreedly_settings
 

@@ -19,7 +19,6 @@ def run_tests():
     #TODO add some configuration here
 
     settings.configure(**DICT_CONF)
-    call_command("syncdb")
     call_command("test", 'spreedly')
 
 if __name__ == "__main__":
