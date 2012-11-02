@@ -5,7 +5,7 @@ DICT_CONF ={
         "DATABASES"         : {
                 'default': {
                     'ENGINE': 'django.db.backends.sqlite3',
-                    'NAME' : path(__file__).dirname() / 'db.file',
+                    'NAME' : ':memory:',
                 }
             },
         "ROOT_URLCONF"      : "tests.urls",

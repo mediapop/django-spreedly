@@ -22,7 +22,7 @@ setup(
     install_requires=[
         'python-spreedly==2.0'
     ],
-    test_suite='django-spreedly.tests',
+    test_suite='tests.runtests.run_tests',
     include_package_data=True,
     entry_points={},
     classifiers=[
