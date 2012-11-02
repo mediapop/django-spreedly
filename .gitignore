@@ -3,3 +3,7 @@
 nbproject
 settings_local.py
 .DS_Store
+
+# Vim files
+*.swp
+*.swo
