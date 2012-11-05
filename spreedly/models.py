@@ -23,10 +23,14 @@ class PlanManager(models.Manager):
         return self.model.objects.filter(enabled=True)
 
     def sync_plans(self):
+        """
+        Gets a full list of plans from spreedly, and updates the local db
+        to match it
+        """
         client = api.Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
 
         for plan in client.get_plans():
-            p, created = Plan.objects.get_or_create(speedly_id=plan['speedly_id'])
+            p, created = Plan.objects.get_or_create(id=plan['id'])
 
             changed = False
             for k, v in plan.items():
@@ -72,7 +76,9 @@ class Plan(models.Model):
 
     version = models.IntegerField(blank=True, default=1)
 
-    id = models.IntegerField(db_index=True, primary_key=True)
+    id = models.IntegerField(db_index=True, primary_key=True,
+            verbose_name="Spreedly ID",
+            help_text="Spreedly plan ID")
     speedly_site_id = models.IntegerField(db_index=True, null=True)
 
     objects = PlanManager()
