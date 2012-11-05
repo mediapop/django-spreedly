@@ -30,6 +30,7 @@ class PlanManager(models.Manager):
         client = api.Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
 
         for plan in client.get_plans():
+            plan = plan['subscription_plan']
             p, created = Plan.objects.get_or_create(id=plan['id'])
 
             changed = False
