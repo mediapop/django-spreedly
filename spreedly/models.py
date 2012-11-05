@@ -58,9 +58,9 @@ class Plan(models.Model):
 
     enabled = models.BooleanField(default=False)
     force_recurring = models.BooleanField(default=False)
-    force_renew = models.BooleanField(default=False)
+    needs_to_be_renewed = models.BooleanField(default=False)
 
-    duration = models.IntegerField(blank=True, default=0)
+    duration_quantity = models.IntegerField(blank=True, default=0)
     duration_units = models.CharField(max_length=10, blank=True)
 
     feature_level = models.CharField(max_length=100, blank=True)
@@ -72,7 +72,7 @@ class Plan(models.Model):
 
     version = models.IntegerField(blank=True, default=1)
 
-    speedly_id = models.IntegerField(db_index=True, primary_key=True)
+    id = models.IntegerField(db_index=True, primary_key=True)
     speedly_site_id = models.IntegerField(db_index=True, null=True)
 
     objects = PlanManager()
