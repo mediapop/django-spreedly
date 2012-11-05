@@ -1,4 +1,4 @@
-from django.utils.transaltion import ugettext_lazy as _
+from django.utils.translation import ugettext as _
 from django.db import models
 from django.db.models import Q
 from django.core.mail import send_mail
@@ -6,6 +6,7 @@ from django.contrib.auth.models import User
 from django.template.loader import render_to_string
 from django.core.urlresolvers import reverse
 from django.conf import settings
+from pyspreedly import api
 import warnings
 
 try:
@@ -20,6 +21,21 @@ import spreedly.settings as spreedly_settings
 class PlanManager(models.Manager):
     def enabled(self):
         return self.model.objects.filter(enabled=True)
+
+    def sync_plans(self):
+        client = api.Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
+
+        for plan in client.get_plans():
+            p, created = Plan.objects.get_or_create(speedly_id=plan['speedly_id'])
+
+            changed = False
+            for k, v in plan.items():
+                if hasattr(p, k) and not getattr(p, k) == v:
+                    setattr(p, k, v)
+                    changed = True
+            if changed:
+                p.save()
+
 
 # Figure out what spreedly calls these in XML to get the lookup correct.
 PLAN_TYPES = (

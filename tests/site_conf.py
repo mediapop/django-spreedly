@@ -23,6 +23,8 @@ DICT_CONF ={
             'django.contrib.contenttypes',
             'django.contrib.sessions',
             'django.contrib.sites',
+            'south',
+            'pyspreedly',
             'spreedly',
             ),
         "SPREEDLY_AUTH_TOKEN" : SPREEDLY_AUTH_TOKEN,
