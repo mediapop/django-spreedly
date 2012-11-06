@@ -9,7 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.views.decorators.csrf import csrf_exempt
 
-from spreedly.pyspreedly.api import Client
+from pyspreedly.api import Client
 from spreedly.functions import sync_plans, get_subscription, start_free_trial
 from spreedly.models import Plan, Subscription, Gift
 import spreedly.settings as spreedly_settings

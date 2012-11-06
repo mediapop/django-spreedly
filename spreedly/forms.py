@@ -13,7 +13,7 @@ from spreedly.models import Plan, Gift
 from spreedly.functions import subscription_url, check_trial_eligibility, return_url
 import spreedly.settings as spreedly_settings
 
-from spreedly.pyspreedly.api import Client
+from pyspreedly.api import Client
 
 class SubscribeForm(forms.Form):
     username = forms.CharField(

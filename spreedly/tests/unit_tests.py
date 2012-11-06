@@ -7,7 +7,7 @@ from spreedly.functions import sync_plans
 from spreedly.models import Plan
 
 
-class TestSubscription(TestCase):
+class TestSyncPlans(TestCase):
     def setUp(self):
         user = User.objects.create(username='test')
         self.sclient = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
@@ -25,18 +25,16 @@ class TestSubscription(TestCase):
 
 
 class TestPlan(TestCase):
+    fixtures = ['sites',]
     @classmethod
     def setUpClass(self):
         self.user = User.objects.create(username='test')
         Plan.objects.sync_plans()
 
-
     def setUp(self):
         self.sclient = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
-        self.plan = Plan.objects.get(pk=1)  # make sure this is trial-enabled
-        self.plan2 = Plan.objects.get(pk=2)  # and that this one is not
-
-
+        self.plan = Plan.objects.get(pk=21431)  # make sure this is trial-enabled
+        self.plan2 = Plan.objects.get(pk=21430)  # and that this one is not
 
     def tearDown(self):
         self.sclient.cleanup()
@@ -51,10 +49,26 @@ class TestPlan(TestCase):
         self.assertTrue(self.plan.start_trial(self.user))
         self.assertFalse(self.plan2.start_trial(self.user))
 
-    def test_return_url(self):
-        url = self.sclient.base_url + reverse('spreedly_return', args=(
-                self.user.id, self.plan.id)) + '?trial=true'
-        self.assertEquals(self.plan.return_url(self.user), url)
-        url =  + reverse('spreedly_return', args=(
-                self.user.id, self.plan2.id))
-        self.assertEquals(self.plan2.return_url(self.user), url)
+    def test_get_return_url(self):
+        url = self.plan.get_return_url(self.user)
+        self.assertEquals(url, 'https://www.testsite.com/return/1/21431/')
+
+class TestSubscriptions(TestCase):
+    fixtures = ['sites',]
+    @classmethod
+    def setUpClass(self):
+        self.user = User.objects.create(username='test')
+        Plan.objects.sync_plans()
+
+
+    def setUp(self):
+        self.sclient = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
+        self.plan = Plan.objects.get(pk=21430)  # and that this one is not
+        self.subscription = self.plan.start_trial(self.user)
+
+    def tearDown(self):
+        self.sclient.cleanup()
+
+    def test_add_charge(self):
+        new_charge = self.subscription.add_fee('test fee', 'a description',
+                'test bill group', 24)

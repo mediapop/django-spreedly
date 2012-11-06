@@ -8,30 +8,14 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
-        # Rename force_renew to needs_to_be_renewed
-        db.rename_column('spreedly_plan', 'force_renew', 'needs_to_be_renewed')
 
-        # Rename spreedly_id
-        db.rename_column('spreedly_plan', 'speedly_id', 'id')
-
-        # Rename duration
-        db.rename_column('spreedly_plan', 'duration', 'duration_quantity')
-
-        db.rename_column('spreedly_plan', 'speedly_site_id', 'spreedly_site_id')
-
+        # Changing field 'Plan.description'
+        db.alter_column('spreedly_plan', 'description', self.gf('django.db.models.fields.TextField')(null=True))
 
     def backwards(self, orm):
-        # Rename force_renew to needs_to_be_renewed
-        db.rename_column('spreedly_plan', 'needs_to_be_renewed', 'force_renew')
 
-        # Rename spreedly_id
-        db.rename_column('spreedly_plan', 'id', 'spreedly_id')
-
-        # Rename duration
-        db.rename_column('spreedly_plan', 'duration_quantity', 'duration')
-        db.rename_column('spreedly_plan', 'spreedly_site_id', 'speedly_site_id')
-
-
+        # Changing field 'Plan.description'
+        db.alter_column('spreedly_plan', 'description', self.gf('django.db.models.fields.TextField')(default=''))
 
     models = {
         'auth.group': {
@@ -85,7 +69,7 @@ class Migration(SchemaMigration):
             'Meta': {'ordering': "['name']", 'object_name': 'Plan'},
             'created_at': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
             'date_changed': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'null': 'True', 'blank': 'True'}),
             'duration_quantity': ('django.db.models.fields.IntegerField', [], {'default': '0', 'blank': 'True'}),
             'duration_units': ('django.db.models.fields.CharField', [], {'max_length': '10', 'blank': 'True'}),
             'enabled': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),

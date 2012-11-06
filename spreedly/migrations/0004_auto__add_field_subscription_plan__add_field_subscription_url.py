@@ -8,29 +8,23 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
-        # Rename force_renew to needs_to_be_renewed
-        db.rename_column('spreedly_plan', 'force_renew', 'needs_to_be_renewed')
+        # Adding field 'Subscription.plan'
+        db.add_column('spreedly_subscription', 'plan',
+                      self.gf('django.db.models.fields.related.ForeignKey')(default=1, to=orm['spreedly.Plan']),
+                      keep_default=False)
 
-        # Rename spreedly_id
-        db.rename_column('spreedly_plan', 'speedly_id', 'id')
-
-        # Rename duration
-        db.rename_column('spreedly_plan', 'duration', 'duration_quantity')
-
-        db.rename_column('spreedly_plan', 'speedly_site_id', 'spreedly_site_id')
+        # Adding field 'Subscription.url'
+        db.add_column('spreedly_subscription', 'url',
+                      self.gf('django.db.models.fields.URLField')(default='', max_length=200),
+                      keep_default=False)
 
 
     def backwards(self, orm):
-        # Rename force_renew to needs_to_be_renewed
-        db.rename_column('spreedly_plan', 'needs_to_be_renewed', 'force_renew')
+        # Deleting field 'Subscription.plan'
+        db.delete_column('spreedly_subscription', 'plan_id')
 
-        # Rename spreedly_id
-        db.rename_column('spreedly_plan', 'id', 'spreedly_id')
-
-        # Rename duration
-        db.rename_column('spreedly_plan', 'duration_quantity', 'duration')
-        db.rename_column('spreedly_plan', 'spreedly_site_id', 'speedly_site_id')
-
+        # Deleting field 'Subscription.url'
+        db.delete_column('spreedly_subscription', 'url')
 
 
     models = {
@@ -85,7 +79,7 @@ class Migration(SchemaMigration):
             'Meta': {'ordering': "['name']", 'object_name': 'Plan'},
             'created_at': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
             'date_changed': ('django.db.models.fields.DateTimeField', [], {'null': 'True'}),
-            'description': ('django.db.models.fields.TextField', [], {'blank': 'True'}),
+            'description': ('django.db.models.fields.TextField', [], {'null': 'True', 'blank': 'True'}),
             'duration_quantity': ('django.db.models.fields.IntegerField', [], {'default': '0', 'blank': 'True'}),
             'duration_units': ('django.db.models.fields.CharField', [], {'max_length': '10', 'blank': 'True'}),
             'enabled': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
@@ -111,9 +105,11 @@ class Migration(SchemaMigration):
             'last_name': ('django.db.models.fields.CharField', [], {'max_length': '100', 'blank': 'True'}),
             'lifetime': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '100', 'blank': 'True'}),
+            'plan': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['spreedly.Plan']"}),
             'recurring': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'token': ('django.db.models.fields.CharField', [], {'max_length': '100', 'blank': 'True'}),
             'trial_elegible': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'url': ('django.db.models.fields.URLField', [], {'max_length': '200'}),
             'user': ('django.db.models.fields.related.OneToOneField', [], {'to': "orm['auth.User']", 'unique': 'True', 'primary_key': 'True'})
         }
     }

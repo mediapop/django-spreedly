@@ -1,12 +1,17 @@
-from django.utils.translation import ugettext as _
+from django.conf import settings
+from django.contrib.auth.models import User
+from django.contrib.sites.models import Site
+from django.core.mail import send_mail
+from django.core.urlresolvers import reverse
 from django.db import models
 from django.db.models import Q
-from django.core.mail import send_mail
-from django.contrib.auth.models import User
+from django.http import Http404
 from django.template.loader import render_to_string
-from django.core.urlresolvers import reverse
-from django.conf import settings
+from django.utils.translation import ugettext as _
 from pyspreedly import api
+from urlparse import urljoin
+import spreedly.settings as spreedly_settings
+from django.conf import settings
 import warnings
 
 try:
@@ -15,7 +20,9 @@ except ImportError:
     from datetime import datetime
 from datetime import timedelta
 
-import spreedly.settings as spreedly_settings
+
+class HttpUnprocessableEntity(Exception):
+    pass
 
 
 class PlanManager(models.Manager):
@@ -31,7 +38,7 @@ class PlanManager(models.Manager):
 
         for plan in client.get_plans():
             plan = plan['subscription_plan']
-            p, created = Plan.objects.get_or_create(id=plan['id'])
+            p, created = Plan.objects.get_or_create(pk=plan['id'])
 
             changed = False
             for k, v in plan.items():
@@ -49,12 +56,16 @@ PLAN_TYPES = (
                 ('free_trial', _('Trial'),)
                 )
 
+
 class Plan(models.Model):
     '''
     Subscription plan
     '''
+    id = models.IntegerField(db_index=True, primary_key=True,
+            verbose_name="Spreedly ID",
+            help_text="Spreedly plan ID")
     name = models.CharField(max_length=64, null=True)
-    description = models.TextField(blank=True)
+    description = models.TextField(null=True,blank=True)
     terms = models.CharField(max_length=100, blank=True)
 
     plan_type = models.CharField(max_length=10, choices=PLAN_TYPES,blank=True)
@@ -77,24 +88,47 @@ class Plan(models.Model):
 
     version = models.IntegerField(blank=True, default=1)
 
-    id = models.IntegerField(db_index=True, primary_key=True,
-            verbose_name="Spreedly ID",
-            help_text="Spreedly plan ID")
-    speedly_site_id = models.IntegerField(db_index=True, null=True)
+    spreedly_site_id = models.IntegerField(db_index=True, null=True)
 
     objects = PlanManager()
 
+    class NotElegibile(Exception):
+        pass
+
+
     class Meta:
         ordering = ['name']
+
+    def __init__(self, *args, **kwargs):
+        self._client = api.Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
+        super(self, Plan).__init__(*args, **kwargs)
 
     def __unicode__(self):
         return self.name
 
     def trial_elegible(self, user):
-        raise NotImplementedError()
+        """Is a customer/user elegibile for a trial?"""
+        try:
+            subscription = user.subscription
+            if subscription.trial_elegible:
+                return True
+            else:
+                return False
+        except Subscription.DoesNotExist:
+            return self.is_free_trial_plan
 
     def start_trial(self, user):
-        raise NotImplementedError()
+        """Check if a user is elegibile for a trial on this plan, and if so,
+        start a plan
+        :param user: user object to check
+        :returns: py:class:`Subscription`
+        :raises: py:class:`Plan.NotElegibile` if the user is not elegibile
+        """
+        if self.trial_elegible(user):
+            response = self._client.subscribe(user.id, self.id)
+            return Subscription.get_or_create(user, self, response)
+        else:
+            raise self.NotElegibile()
 
     @property
     def plan_type_display(self):
@@ -109,12 +143,44 @@ class Plan(models.Model):
     def is_free_trial_plan(self):
         return self.plan_type == "free_trial"
 
+    def get_return_url(self, user):
+        site = Site.objects.get(pk=settings.SITE_ID)
+        base_url = 'https://{site.domain}/'.format(site=site)
+        url = urljoin(base_url, reverse('spreedly_return', args=[user.id, self.id]))
+        return url
+
+    def subscription_url(self,user):
+        try:
+            token = user.subscription.token
+        except (AttributeError, Subscription.DoesotExist):
+            token = None
+        return self._client.get_signup_url(subscriber_id=user.id,plan_id=self.id,
+            screen_name=user.username, token=token)
+
+
 class SubscriptionManager(models.Manager):
-    def has_active(self, user):
-        '''
-        Determine if given user has active subscription
-        '''
-        return self.model.objects.filter(user=user, active=True).filter(Q(active_until__gt=datetime.today())|Q(active_until__isnull=True)).count()
+    def get_or_create(self, user, plan, data):
+        """ .. py:method:: get_or_create(user, plan, data)
+        get or create a subscription based on a user, plan and data passed
+        :param user: py:class:`auth.User`
+        :param plan: py:class:`Plan`
+        :param data: python dict containing the data as returned from spreedly
+        :returns: py:class:`Subscription`
+        """
+        try:
+            subscription = self.get(user=user,plan=plan)
+        except Subscription.DoesNotExist:
+            subscription = Subscription()
+            for k in data:
+                try:
+                    setattr(subscription,k,data[k])
+                except AttributeError:
+                    pass
+            subscription.user = user
+            subscription.plan = plan
+            subscription.save()
+            return subscription
+
 
 class Subscription(models.Model):
     name = models.CharField(max_length=100, blank=True)
@@ -131,9 +197,17 @@ class Subscription(models.Model):
     recurring = models.BooleanField(default=False)
     active = models.BooleanField(default=False)
 
+    plan = models.ForeignKey(Plan)
+
+    url = models.URLField(editable=False)
+
     card_expires_before_next_auto_renew = models.BooleanField(default=False)
 
     objects = SubscriptionManager()
+
+    def __init__(self, *args, **kwargs):
+        self._client = api.Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
+        super(self, Plan).__init__(*args, **kwargs)
 
     def __unicode__(self):
         return u'Subscription for %s' % self.user
@@ -142,6 +216,7 @@ class Subscription(models.Model):
         if self.active and not self.user.is_active:
             self.user.is_active = True
             self.user.save()
+        self.url = urljoin(self._client.base_url,'subscriber_accounts/{token}'.format(token=self.token))
         super(Subscription, self).save(*args, **kwargs)
 
     @property
@@ -158,6 +233,24 @@ class Subscription(models.Model):
 
     def subscription_url(self, user):
         raise NotImplementedError()
+
+    def add_fee(self, name, description, group, amount):
+        """ .. py:method:: add_fee(name, description, group, ammount)
+        Add a fee to the subscription
+        :param name: the name of the fee (eg - Excess Bandwidth Charge)
+        :param description: a description of the charge
+        :param group: a group to add this charge too
+        :param amount: the amount the charge is for
+        :returns: None
+        :raises: Http404 if incorrect subscriber, HttpUnprocessableEntity for
+            any other 422 error
+        """
+        response = self._client.add_fee(self.user.id,name,description,group,
+                amount)
+        if response == 404:
+            raise Http404()
+        elif response == 422:
+            raise HttpUnprocessableEntity()
 
 
 class Gift(models.Model):

@@ -27,6 +27,7 @@ DICT_CONF ={
             'pyspreedly',
             'spreedly',
             ),
+        "FIXTURE_DIRS" : [path(__file__).dirname() / 'fixtures',],
         "SPREEDLY_AUTH_TOKEN" : SPREEDLY_AUTH_TOKEN,
         "SPREEDLY_SITE_NAME"  : SPREEDLY_SITE_NAME,
         "SITE_ID" : 1,
