@@ -1,4 +1,5 @@
 from django.http import Http404, HttpResponse, HttpResponseRedirect
+from django.utils.decorators import method_decorator
 from django.utils.translation import ugettext_lazy as _
 from django.shortcuts import render_to_response
 from django.contrib.auth.models import User
@@ -9,7 +10,7 @@ from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.views.decorators.csrf import csrf_exempt
-from django.views.generic import ListView, TemplateView, View
+from django.views.generic import ListView, TemplateView, View, FormView
 from django.views.generic.edit import FormMixin
 from django.core.urlresolvers import reverse
 
@@ -21,6 +22,13 @@ from spreedly.forms import SubscribeForm, GiftRegisterForm, AdminGiftForm
 from spreedly import signals
 
 class PlanList(ListView, FormMixin):
+    """.. py:class:: PlanList
+    inherits from :py:cls:`ListView` and :py:cls:`FormMixin`, hybrid list and
+    subscription entry view.
+    default template name is `spreedly_plan_list.html`,
+    object_list name is `plans`
+    cache's plans for 24 hours
+    """
     template_name = "spreedly_plan_list.html"
     model = Plan
     context_object_name = 'plans'
@@ -115,6 +123,26 @@ def plan_list(request, extra_context=None, **kwargs):
         kwargs,
         context_instance=context
     )
+
+
+class AdminGift(FormView):
+    form = AdminGiftForm
+    template_name = 'spreedly_admin_gift.html'
+
+    @method_decorator(staff_member_required)
+    def dispatch(self, *args, **kwargs):
+        return super(AdminGift, self).dispatch(*args, **kwargs)
+
+    def form_valid(self, form):
+        user = form.save(request)
+
+        subscriber = Subscription.objects.get_or_create(user,
+                form.cleaned_data['plan'])  # No data -> get from client
+        subscriber.create_complimentary_subscription(form.cleaned_data['time'],
+                form.cleaned_data['units'], form.cleaned_data['feature_level'])
+        user.gifts_received.latest('id').send_activation_email()
+        return super(AdminGift, self).form_valid(form)
+
 
 @staff_member_required
 def admin_gift(request):

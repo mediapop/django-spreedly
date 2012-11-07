@@ -135,6 +135,7 @@ class Plan(models.Model):
         warnings.warn("Deprecated due to switiching to choices",DeprecationWarning)
         return self.plan_type.replace('_',' ').title()
 
+
     @property
     def is_gift_plan(self):
         return self.plan_type == "gift"
@@ -171,16 +172,20 @@ class SubscriptionManager(models.Manager):
             subscription = self.get(user=user,plan=plan)
         except Subscription.DoesNotExist:
             subscription = Subscription()
+            if not data:  # new client, no plan.
+                data = self._client.create_subscriber(user.id, user.username)
             for k in data:
                 try:
                     if data[k] is not None:
-                        setattr(subscription,k,data[k])
+                        if subscription.get(k) != data[k]:
+                            setattr(subscription,k,data[k])
                 except AttributeError:
                     pass
-            subscription.user = user
-            subscription.plan = plan
-            subscription.save()
-            return subscription
+        subscription.user = user
+        subscription.plan = plan
+        subscription.active = getattr(subscription, 'active', bool(plan))
+        subscription.save()
+        return subscription
 
 
 class Subscription(models.Model):
@@ -198,7 +203,7 @@ class Subscription(models.Model):
     recurring = models.BooleanField(default=False)
     active = models.BooleanField(default=False)
 
-    plan = models.ForeignKey(Plan)
+    plan = models.ForeignKey(Plan, null=True)
 
     url = models.URLField(editable=False)
 
@@ -252,6 +257,11 @@ class Subscription(models.Model):
         self.save()
         return self
 
+    def create_complimentary_subscription(self, time, unit, feature_level):
+        """ .. py:method:create_complimentary_subscription(time, unit, feature_level)
+        :raises: :py:cls: `NotImplementedError` cause it isn't implemented
+        """
+        raise NotImplementedError()
 
     def add_fee(self, name, description, group, amount):
         """ .. py:method:: add_fee(name, description, group, ammount)

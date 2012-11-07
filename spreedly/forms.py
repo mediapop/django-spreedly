@@ -203,10 +203,11 @@ class PlanModelChoiceField(forms.ModelChoiceField):
             return '*%s' % (obj)
         
 class AdminGiftForm(forms.Form):
-    plan_name = forms.CharField(
-        label="Plan Name",
+    plan = forms.ModelChoiceField(queryset=Plan.objects.enabled())
+        label="Plan",
         required=True
     )
+    #TODO do something with this
     feature_level = forms.ChoiceField(
         label="Feature Level",
         choices=[(x,x) for x in set(Plan.objects.values_list('feature_level', flat=True))]
@@ -237,8 +238,13 @@ class AdminGiftForm(forms.Form):
         required=True
     )
 
+    def clean(self):
+        self.cleaned_data = super(AdminGiftForm, self).clean()
+        self.cleaned_data['gift_id'] = str(uuid.uuid4().hex)[:29]
+        return self.cleaned_data
+
     def save(self, request):
-        gift_id = str(uuid.uuid4().hex)[:29]
+        gift_id = self.cleaned_data['gift_id']
         
         user = User.objects.create(
             username=gift_id,
