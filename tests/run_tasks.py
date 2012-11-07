@@ -24,6 +24,7 @@ def run_tests():
 
     settings.configure(**DICT_CONF)
     call_command("test", 'spreedly')
+    sys.exit(0)
 
 def syncdb():
     call_command("syncdb")
