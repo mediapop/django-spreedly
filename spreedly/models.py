@@ -101,7 +101,7 @@ class Plan(models.Model):
 
     def __init__(self, *args, **kwargs):
         self._client = api.Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
-        super(self, Plan).__init__(*args, **kwargs)
+        super(Plan, self).__init__(*args, **kwargs)
 
     def __unicode__(self):
         return self.name
@@ -126,7 +126,7 @@ class Plan(models.Model):
         """
         if self.trial_elegible(user):
             response = self._client.subscribe(user.id, self.id)
-            return Subscription.get_or_create(user, self, response)
+            return Subscription.objects.get_or_create(user, self, response)
         else:
             raise self.NotElegibile()
 
@@ -173,7 +173,8 @@ class SubscriptionManager(models.Manager):
             subscription = Subscription()
             for k in data:
                 try:
-                    setattr(subscription,k,data[k])
+                    if data[k] is not None:
+                        setattr(subscription,k,data[k])
                 except AttributeError:
                     pass
             subscription.user = user
@@ -207,7 +208,7 @@ class Subscription(models.Model):
 
     def __init__(self, *args, **kwargs):
         self._client = api.Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
-        super(self, Plan).__init__(*args, **kwargs)
+        super(Subscription,self).__init__(*args, **kwargs)
 
     def __unicode__(self):
         return u'Subscription for %s' % self.user

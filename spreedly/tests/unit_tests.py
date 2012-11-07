@@ -28,15 +28,16 @@ class TestPlan(TestCase):
     fixtures = ['sites',]
     @classmethod
     def setUpClass(self):
-        self.user = User.objects.create(username='test')
-        Plan.objects.sync_plans()
-
-    def setUp(self):
         self.sclient = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
+        self.user = User.objects.create(username='test')
+        self.client_data = self.sclient.create_subscriber(self.user.id,'test')
+        Plan.objects.sync_plans()
         self.plan = Plan.objects.get(pk=21431)  # make sure this is trial-enabled
         self.plan2 = Plan.objects.get(pk=21430)  # and that this one is not
 
-    def tearDown(self):
+    @classmethod
+    def tearDownClass(self):
+        self.user.delete()
         self.sclient.cleanup()
 
     def test_trial_elegibility(self):
