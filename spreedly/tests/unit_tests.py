@@ -30,30 +30,31 @@ class TestPlan(TestCase):
     @classmethod
     def setUpClass(self):
         self.sclient = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
-        self.user = User.objects.create(username='test')
-        self.client_data = self.sclient.create_subscriber(self.user.id,'test')
         Plan.objects.sync_plans()
         self.plan = Plan.objects.get(pk=21431)  # make sure this is trial-enabled
         self.plan2 = Plan.objects.get(pk=21430)  # and that this one is not
 
-    @classmethod
-    def tearDownClass(self):
+    def setUp(self):
+        self.user = User.objects.create(username='test')
+        self.client_data = self.sclient.create_subscriber(self.user.id,'test')
+
+    def tearDown(self):
         self.user.delete()
         self.sclient.cleanup()
 
-    def test_trial_elegibility(self):
-        """Plan should have a check for elegibility"""
-        # already on free trial - should be ineligible
-        self.assertFalse(self.plan.trial_eligible(self.user))
-        import ipdb; ipdb.set_trace()  # BREAKPOINT
-        self.user.subscription.allow_free_trial()
+    def test_trial_eligibility(self):
+        """Plan should have a check for eligibility"""
         self.assertTrue(self.plan.trial_eligible(self.user))
         self.assertFalse(self.plan2.trial_eligible(self.user))
 
     def test_start_trial(self):
-        """A user should be able to start a free trial on an elegibile plan"""
+        """A user should be able to start a free trial on an eligibile plan"""
         self.assertTrue(self.plan.start_trial(self.user))
-        self.assertRaises(Plan.NotElegibile,self.plan2.start_trial,self.user)
+        self.assertRaises(Plan.NotEligibile,self.plan2.start_trial,self.user)
+
+    def test_trial_eligibility_on_trial(self):
+        self.plan.start_trial(self.user)
+        self.assertFalse(self.plan.trial_eligible(self.user))
 
     def test_get_return_url(self):
         url = self.plan.get_return_url(self.user)
@@ -64,7 +65,6 @@ class TestSubscriptions(TestCase):
     @classmethod
     def setUpClass(self):
         Plan.objects.sync_plans()
-
 
     def setUp(self):
         self.sclient = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)

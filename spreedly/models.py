@@ -92,7 +92,7 @@ class Plan(models.Model):
 
     objects = PlanManager()
 
-    class NotElegibile(Exception):
+    class NotEligibile(Exception):
         pass
 
 
@@ -106,11 +106,11 @@ class Plan(models.Model):
     def __unicode__(self):
         return self.name
 
-    def trial_elegible(self, user):
-        """Is a customer/user elegibile for a trial?"""
+    def trial_eligible(self, user):
+        """Is a customer/user eligibile for a trial?"""
         try:
             subscription = user.subscription
-            if subscription.elegibile_for_free_trial:
+            if subscription.plan == self and subscription.eligible_for_free_trial:
                 return True
             else:
                 return False
@@ -118,17 +118,17 @@ class Plan(models.Model):
             return self.is_free_trial_plan
 
     def start_trial(self, user):
-        """Check if a user is elegibile for a trial on this plan, and if so,
+        """Check if a user is eligibile for a trial on this plan, and if so,
         start a plan
         :param user: user object to check
         :returns: py:class:`Subscription`
-        :raises: py:class:`Plan.NotElegibile` if the user is not elegibile
+        :raises: py:class:`Plan.NotEligibile` if the user is not eligibile
         """
-        if self.trial_elegible(user):
+        if self.trial_eligible(user):
             response = self._client.subscribe(user.id, self.id)
             return Subscription.objects.get_or_create(user, self, response)
         else:
-            raise self.NotElegibile()
+            raise self.NotEligibile()
 
     @property
     def plan_type_display(self):
@@ -193,7 +193,7 @@ class Subscription(models.Model):
     active_until = models.DateTimeField(blank=True, null=True)
     token = models.CharField(max_length=100, blank=True)
 
-    elegibile_for_free_trial = models.BooleanField(default=False)
+    eligible_for_free_trial = models.BooleanField(default=False)
     lifetime = models.BooleanField(default=False)
     recurring = models.BooleanField(default=False)
     active = models.BooleanField(default=False)
@@ -245,7 +245,7 @@ class Subscription(models.Model):
         for k in response:
             try:
                 if response[k] is not None:
-                    if self.k != response[k]:
+                    if getattr(self,k) != response[k]:
                         setattr(self,k,response[k])
             except AttributeError:
                 pass

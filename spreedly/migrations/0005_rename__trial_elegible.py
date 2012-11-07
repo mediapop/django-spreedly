@@ -8,10 +8,10 @@ from django.db import models
 class Migration(SchemaMigration):
 
     def forwards(self, orm):
-        db.rename_column('spreedly_subscription', 'trial_elegible', 'elegibile_for_free_trial')
+        db.rename_column('spreedly_subscription', 'trial_elegible', 'eligible_for_free_trial')
 
     def backwards(self, orm):
-        db.rename_column('spreedly_subscription', 'eligibile_for_free_trial', 'trial_elegible')
+        db.rename_column('spreedly_subscription', 'eligible_for_free_trial', 'trial_elegible')
 
 
     models = {
@@ -87,7 +87,7 @@ class Migration(SchemaMigration):
             'active': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'active_until': ('django.db.models.fields.DateTimeField', [], {'null': 'True', 'blank': 'True'}),
             'card_expires_before_next_auto_renew': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
-            'elegibile_for_free_trial': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
+            'eligible_for_free_trial': ('django.db.models.fields.BooleanField', [], {'default': 'False'}),
             'feature_level': ('django.db.models.fields.CharField', [], {'max_length': '100', 'blank': 'True'}),
             'first_name': ('django.db.models.fields.CharField', [], {'max_length': '100', 'blank': 'True'}),
             'last_name': ('django.db.models.fields.CharField', [], {'max_length': '100', 'blank': 'True'}),
