@@ -1,4 +1,5 @@
 from django.http import Http404, HttpResponse, HttpResponseRedirect
+from django.utils.translation import ugettext_lazy as _
 from django.shortcuts import render_to_response
 from django.contrib.auth.models import User
 from django.template import RequestContext
@@ -8,6 +9,9 @@ from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.views.decorators.csrf import csrf_exempt
+from django.views.generic import ListView, TemplateView, View
+from django.views.generic.edit import FormMixin
+from django.core.urlresolvers import reverse
 
 from pyspreedly.api import Client
 from spreedly.functions import sync_plans, get_subscription, start_free_trial
@@ -15,6 +19,61 @@ from spreedly.models import Plan, Subscription, Gift
 import spreedly.settings as spreedly_settings
 from spreedly.forms import SubscribeForm, GiftRegisterForm, AdminGiftForm
 from spreedly import signals
+
+class PlanList(ListView, FormMixin):
+    template_name = "spreedly_plan_list.html"
+    model = Plan
+    context_object_name = 'plans'
+    form_class = SubscribeForm
+
+    def get_context_data(self, object_list, **kwargs):
+        context = ListView.get_context_data(self, object_list)
+        context.update(FormMixin.get_context_data(self, **kwargs))
+        if self.request.user.is_authenticated():
+            context['current_user_subscription'] = getattr(self.request.user, 'subscription', None)
+        else:
+            context['current_user_subscription'] = None
+
+    def get_queryset(self):
+        cache_key = 'spreedly_plans_list'
+        plans = cache.get(cache_key)
+        if not plans:
+            Plan.objects.sync_plans()
+            plans = Plan.objects.enabled()
+            cache.set(cache_key, plans, 60*60*24)
+        return plans
+
+    def get_success_url(self):
+        return reverse('spreedly_email_sent', args=[self.request.user_id])
+
+    def get(self):
+        form_class = self.get_form_class()
+        form = self.get_form(form_class)
+        self.object_list = self.get_queryset()
+        allow_empty = self.get_allow_empty()
+        if not allow_empty and len(self.object_list) == 0:
+            raise Http404(_(u"Empty list and '%(class_name)s.allow_empty' is False.")
+                          % {'class_name': self.__class__.__name__})
+        context = self.get_context_data(object_list=self.object_list)
+        context['form'] = form
+        return self.render_to_response(context)
+
+    def form_valid(self, form):
+        form.save()
+        super(PlanList, self).form_valid(form)
+
+    def form_invalid(self, form):
+        self.render_to_response(self.get_context_data(
+            object_list=self.object_list, form=form))
+
+    def post(self):
+        form_class = self.get_form_class()
+        form = self.get_form(form_class)
+        if form.is_valid():
+            return self.form_valid(form)
+        else:
+            return self.form_invalid(form)
+
 
 def plan_list(request, extra_context=None, **kwargs):
     sub = None
