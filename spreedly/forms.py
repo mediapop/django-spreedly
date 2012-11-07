@@ -9,7 +9,7 @@ from django.core.urlresolvers import reverse
 from django.template.loader import render_to_string
 from django.utils.translation import ugettext_lazy as _
 
-from spreedly.models import Plan, Gift
+from spreedly.models import Plan, Gift, Subscription
 from spreedly.functions import subscription_url, check_trial_eligibility, return_url
 import spreedly.settings as spreedly_settings
 
@@ -47,7 +47,7 @@ class SubscribeForm(forms.Form):
                 raise forms.ValidationError(_("You must type the same password each time."))
             
             if plan.is_free_trial_plan:
-                existing_users = Subscription.objects.filter(user__email=email, trial_elegible=False).count()
+                existing_users = Subscription.objects.filter(user__email=email, trial_eligible=False).count()
                 if existing_users:
                     raise forms.ValidationError(_("A user with this email has already had a free trial."))
             

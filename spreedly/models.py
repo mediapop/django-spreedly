@@ -110,7 +110,7 @@ class Plan(models.Model):
         """Is a customer/user elegibile for a trial?"""
         try:
             subscription = user.subscription
-            if subscription.trial_elegible:
+            if subscription.elegibile_for_free_trial:
                 return True
             else:
                 return False
@@ -193,7 +193,7 @@ class Subscription(models.Model):
     active_until = models.DateTimeField(blank=True, null=True)
     token = models.CharField(max_length=100, blank=True)
 
-    trial_elegible = models.BooleanField(default=False)
+    elegibile_for_free_trial = models.BooleanField(default=False)
     lifetime = models.BooleanField(default=False)
     recurring = models.BooleanField(default=False)
     active = models.BooleanField(default=False)
@@ -234,6 +234,24 @@ class Subscription(models.Model):
 
     def subscription_url(self, user):
         raise NotImplementedError()
+
+    def allow_free_trial(self):
+        """ .. py:method:: allow_free_trial()
+        Allow a free Trial
+        :returns: :py:class:`Subscription`
+        :raises: :py:class:`Exception` (of some kind) if bad juju
+        """
+        response  = self._client.allow_free_trial(self.user.id)
+        for k in response:
+            try:
+                if response[k] is not None:
+                    if self.k != response[k]:
+                        setattr(self,k,response[k])
+            except AttributeError:
+                pass
+        self.save()
+        return self
+
 
     def add_fee(self, name, description, group, amount):
         """ .. py:method:: add_fee(name, description, group, ammount)
