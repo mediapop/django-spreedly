@@ -32,6 +32,9 @@ def syncdb():
 def schema_migrate(auto=True, empty=False, update=False):
     call_command("schemamigration","spreedly",auto=auto,empty=empty,update=update)
 
+def data_migrate(args):
+    call_command("datamigration", "spreedly", *args)
+
 def migrate():
     call_command("migrate", "spreedly")
 
@@ -44,7 +47,7 @@ if __name__ == "__main__":
     parser = ArgumentParser(description="run tasks for django-spreedly")
     parser.add_argument('--test', action='store_true', default=False,
             help="Run the test for django-spreedly")
-    parser.add_argument('--datamigration', action='store_true',
+    parser.add_argument('--datamigration', action='append',
             help="run datamigration")
     parser.add_argument('--sql', action='store_true',
             help="run sql")
@@ -63,6 +66,11 @@ if __name__ == "__main__":
         syncdb()
         migrate()
         schema_migrate(auto=args.auto,empty=args.empty,update=args.update)
+    if args.datamigration:
+        conf()
+        syncdb()
+        migrate()
+        data_migrate(args.datamigration)
     elif args.sql:
         conf()
         syncdb()
