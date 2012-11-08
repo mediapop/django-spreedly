@@ -203,7 +203,7 @@ class Subscription(models.Model):
     recurring = models.BooleanField(default=False)
     active = models.BooleanField(default=False)
 
-    plan = models.ForeignKey(Plan, null=True)
+    plan = models.ForeignKey(Plan, null=True, default=None)
 
     url = models.URLField(editable=False)
 
