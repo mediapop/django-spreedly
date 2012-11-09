@@ -1,5 +1,6 @@
 from django.http import Http404, HttpResponse, HttpResponseRedirect
 from django.core.exceptions import SuspiciousOperation
+from django.utils.decorators import classonlymethod
 from django.utils.decorators import method_decorator
 from django.utils.translation import ugettext_lazy as _
 from django.shortcuts import render_to_response, get_object_or_404
@@ -349,8 +350,8 @@ class SubscriptionDetails(DetailView):
 
 class PlanDetails(DetailView):
     model = Plan
-    context_object_name = 'plan'
-    template_name = 'spreedly/plan_details.html'
+    pk_url_kwarg = 'plan_pk'
+    slug_url_kwarg = 'plan_pk'
 
 
 class EditSubscriber(UpdateView):
