@@ -160,7 +160,7 @@ class Plan(models.Model):
 
 
 class SubscriptionManager(models.Manager):
-    def get_or_create(self, user, plan, data):
+    def get_or_create(self, user, plan=None, data=None):
         """ .. py:method:: get_or_create(user, plan, data)
         get or create a subscription based on a user, plan and data passed
         :param user: py:class:`auth.User`
@@ -173,7 +173,7 @@ class SubscriptionManager(models.Manager):
         except Subscription.DoesNotExist:
             subscription = Subscription()
             if not data:  # new client, no plan.
-                data = self._client.create_subscriber(user.id, user.username)
+                data = subscription._client.create_subscriber(user.id, user.username)
             for k in data:
                 try:
                     if data[k] is not None:

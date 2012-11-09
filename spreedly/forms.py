@@ -88,6 +88,11 @@ class SubscribeForm(forms.Form):
         )
         return reverse('spreedly_email_sent', args=[user.id])
 
+class SubscribeUpdateForm(forms.ModelForm):
+    #TODO this needs to correctly update a form using pyspreedly.api.client
+    class Meta:
+        model = Subscription
+
 class GiftRegisterForm(forms.Form):
     username = forms.CharField(
         max_length=30,
@@ -203,7 +208,7 @@ class PlanModelChoiceField(forms.ModelChoiceField):
             return '*%s' % (obj)
         
 class AdminGiftForm(forms.Form):
-    plan = forms.ModelChoiceField(queryset=Plan.objects.enabled())
+    plan = forms.ModelChoiceField(queryset=Plan.objects.enabled(),
         label="Plan",
         required=True
     )

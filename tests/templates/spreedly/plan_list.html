@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+{% load spreedly_tags %}
+<html>
+	<head>
+		<title>Subscriptions</title>
+	</head>
+	<body>
+		<h1>Subscriptions</h1>
+		<h2>
+			{% if current_user_subscription %}
+		    	Your current subscription is '{{ current_user_subscription.name }}' and its currently {% if current_user_subscription.active %}Active{% else %}not Active{% endif %}.
+			{% else %}
+				Already have a subscription? <a href="{{ login }}">Log In!</a>
+			{% endif %}
+		</h2>
+
+		{% if request.user.is_authenticated %}
+			<h3>
+				{% if current_user_subscription.lifetime %}
+					You have a lifetime subscription! You'll never have to pay or update :)
+				{% else %}
+					<a href="{% existing_plan_url user %}">Change or update your subscription settings</a>
+				{% endif %}
+			</h3>
+		{% endif %}
+
+
+		{% if plans %}
+			<h3>Available plans:</h3>
+			<table>
+				<tr><th>Plan Type</th><th>Plan</th><th>Description</th><th>Terms</th><th>Price</th><th>Duration</th><th>Feature Level</th></tr>
+				{% for plan in plans %}
+					<tr>
+						<th>{% ifchanged %}{{ plan.plan_type_display }}{% endifchanged %}</th>
+						<td>
+							{{ plan }}
+							{% if current_user_subscription and not current_user_subscription.lifetime %}<a href="{% new_plan_url plan request.user %}">[Switch to this plan]</a>{% endif %}
+						</td>
+						<td>{{ plan.description }}</td>
+						<td>{{ plan.terms }}</td>
+						<td>${{ plan.price }}</td>
+						<td>{% if plan.duration %}{{ plan.duration }} {{ plan.duration_units}}{% else %}Forever!{% endif %}</td>
+						<td>{{ plan.feature_level }}</td>
+					</tr>
+				{% endfor %}
+			</table>
+		{% else %}
+			<p>There are currently no subscription plans for this site.</p>
+		{% endif %}
+
+		{% if not request.user.is_authenticated %}
+			<h3>Subscribe</h3>
+			<form action="." method="post">
+				{{ form.as_table }}
+				<p><input type="submit" value="Continue &rarr;"></p>
+			</form>
+		{% endif %}
+	</body>
+</html>
