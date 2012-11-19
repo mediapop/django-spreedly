@@ -163,7 +163,7 @@ class Plan(models.Model):
 
 
 class FeeGroup(models.Model):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, primary_key=True)
 
 
 class Fee(models.Model):
@@ -200,6 +200,8 @@ class Fee(models.Model):
         :raises: py:class:`Http404` if spreedly can't find the plan, user, etc.
         :raises: py:class:`HttpUnprocessableEntity` if spreedly raised 422 for some reason.
         """
+        if not amount:
+            amount = self.default_amount
         if amount <= 0:
             raise ValueError("Amount must be greater than 0")
         try:

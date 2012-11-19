@@ -5,7 +5,7 @@ from pyspreedly.api import Client
 from django.core.urlresolvers import reverse
 from spreedly.functions import sync_plans
 from spreedly.models import HttpUnprocessableEntity
-from spreedly.models import Plan
+from spreedly.models import Plan, Fee, FeeGroup, LineItem
 
 
 class TestSyncPlans(TestCase):
@@ -83,3 +83,77 @@ class TestSubscriptions(TestCase):
         user interaction"""
         self.assertRaises(HttpUnprocessableEntity,self.subscription.add_fee, *('test fee', 'a description',
                 'test bill group', 24,))
+
+
+class TestFees(TestCase):
+    fixtures = ['sites',]
+    @classmethod
+    def setUpClass(self):
+        Plan.objects.sync_plans()
+
+    def setUp(self):
+        self.sclient = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
+        self.plan = Plan.objects.get(pk=21431)
+        self.user = User.objects.create(username='test')
+        self.client_data = self.sclient.create_subscriber(self.user.id,'test')
+        # Get them subscribed to a real Plan
+
+    def tearDown(self):
+        self.user.delete()
+        self.sclient.cleanup()
+
+    def test_create_fee(self):
+        fee_group = FeeGroup.objects.create(name="Test feegroup 1")
+        fee_group2 = FeeGroup.objects.create(name="test feegroup 2")
+        fee = Fee.objects.create(
+                plan=self.plan,
+                name=u"test fee",
+                group=fee_group,
+                default_amount=0)
+        fee2 = Fee.objects.create(
+                plan=self.plan,
+                name=u"test fee 2",
+                group=fee_group,
+                default_amount=10)
+        self.assertRaises(ValueError, Fee.objects.create, kwargs={
+                'plan':self.plan,
+                'name':u"test fee 2",
+                'group':fee_group,
+                'default_amount':-10})
+        fee.delete()
+        fee2.delete()
+        fee_group.delete()
+        fee_group2.delete()
+
+    def test_add_fee(self):
+        fixtures = ['sites',]
+        @classmethod
+        def setUpClass(self):
+            Plan.objects.sync_plans()
+
+        def setUp(self):
+            self.sclient = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
+            self.plan = Plan.objects.get(pk=21431)
+            self.user = User.objects.create(username='test')
+            self.client_data = self.sclient.create_subscriber(self.user.id,'test')
+            self.fee_group = FeeGroup.objects.create(name="Test feegroup 1")
+            self.fee_group2 = FeeGroup.objects.create(name="test feegroup 2")
+            self.fee = Fee.objects.create(
+                    plan=self.plan,
+                    name=u"test fee",
+                    group=fee_group,
+                    default_amount=0)
+            self.fee2 = Fee.objects.create(
+                    plan=self.plan,
+                    name=u"test fee 2",
+                    group=fee_group,
+                    default_amount=10)
+            # Get them subscribed to a real Plan
+
+        def tearDown(self):
+            self.fee.delete()
+            self.fee2.delete()
+            self.fee_group.delete()
+            self.fee_group2.delete()
+            self.user.delete()
+            self.sclient.cleanup()
