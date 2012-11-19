@@ -14,6 +14,9 @@ import spreedly.settings as spreedly_settings
 from django.conf import settings
 import warnings
 
+import logging
+logger = logging.getLogger(__name__)
+
 try:
     from django.utils.timezone import datetime
 except ImportError:
@@ -159,6 +162,102 @@ class Plan(models.Model):
             screen_name=user.username, token=token)
 
 
+class FeeGroup(models.Model):
+    name = models.CharField(max_length=100)
+
+
+class Fee(models.Model):
+    """ .. py:class::Fee
+    A Fee for a given Plan.
+
+    :attr plan: ForeignKey(Plan)
+    :attr name: CharField(max_length=100)
+    :attr group: ForeignKey(FeeGroup)
+    :attr default_amount: DecimalField(default=0)
+    """
+    plan = models.ForeignKey(Plan)
+    name = models.CharField(max_length=100)
+    group = models.ForeignKey(FeeGroup)
+    default_amount= models.DecimalField(max_digits=6, decimal_places=2, default='0',
+        help_text=u'USD')
+
+    def add_fee(self, user, description, amount=None):
+        """ .. py:method::add_fee(user, description[, amount])
+
+        add a fee to the given user, with description and amount.  if amount
+        is not passed, then it will use `default_amount` if it is greater than
+        0.
+
+        if 404 or 422 are returned, the default action is not to save the
+        line item to the db, this can be overriden with the setting
+        SPREEDLY_SAVE_ON_FAIL, but it is not recomended as who knows what will
+        happen.
+
+        :param user: the user to bill for the fee.  they must be subscribed to `self.plan`
+        :param description: The description of the fee to appear on the invoice
+        :param amount: The amount to bill or `None`
+        :raises: py:class:`ValueError` if the user is not subscribed to the plan or is subscribed to a different plan.
+        :raises: py:class:`Http404` if spreedly can't find the plan, user, etc.
+        :raises: py:class:`HttpUnprocessableEntity` if spreedly raised 422 for some reason.
+        """
+        if amount <= 0:
+            raise ValueError("Amount must be greater than 0")
+        try:
+            if user.plan != self.subscription.plan:
+                raise ValueError("This fee is not for the user's plan")
+        except Subscription.DoesNotExist:
+                raise ValueError("This user is not signed up to a plan")
+        line_item = LineItem(
+                fee=self,
+                user=user,
+                amount=amount,
+                description=description)
+        response = self.plan._client.add_fee(user.id, self.name,
+                description, self.group.name, amount)
+        response_code = response.status_code
+        if response_code == 404:
+            logger.error('fee failed to process due to not found: {fee}, {user}'
+                         ', {description}, {amount}. response: {response}'.format(
+                             fee=self, user=user, description=description,
+                             amount=amount, response=response))
+            raise Http404()
+        elif response_code == 422:
+            logger.error('fee failed to process due to unprocesable: {fee}, {user}'
+                         ', {description}, {amount}. response: {response}'.format(
+                             fee=self, user=user, description=description,
+                             amount=amount, response=response))
+            raise HttpUnprocessableEntity()
+        try:
+            if response_code == 200:  #XXX Not sure what the code should be as no internet to check atm.
+                line_item.successfull = True
+                line_item.save()
+            elif spreedly_settings.SPREEDLY_SAVE_ON_FAIL:
+                line_item.successfull = False
+                line_item.save()
+        except Exception as e:
+            logger.critical(
+                    'line_item failed to save: {fee}, {user}'
+                    ', {description}, {amount}. response: {response} '
+                    'line_item: {line_item}, error: {e}'.format(
+                            fee=self, user=user, description=description,
+                            amount=amount, response=response,
+                            line_item=line_item, e=e))
+            e.response = response
+            raise e
+
+
+
+class LineItem(models.Model):
+    """This is an instance of a fee"""
+    fee = models.ForeignKey(Fee)
+    user = models.ForeignKey('auth.User')
+    amount= models.DecimalField(max_digits=6, decimal_places=2, default='0',
+        help_text=u'USD')
+    issued_at = models.DateTimeField(auto_now_add=True)
+    successfull = models.BooleanField(default=False)
+    description = models.TextField()
+
+
 class SubscriptionManager(models.Manager):
     def get_or_create(self, user, plan=None, data=None):
         """ .. py:method:: get_or_create(user, plan, data)
@@ -263,8 +362,8 @@ class Subscription(models.Model):
         """
         raise NotImplementedError()
 
-    def add_fee(self, name, description, group, amount):
-        """ .. py:method:: add_fee(name, description, group, ammount)
+    def add_fee(self, fee, description, amount):
+        """ .. py:method:: add_fee(name, description, group, amount)
         Add a fee to the subscription
         :param name: the name of the fee (eg - Excess Bandwidth Charge)
         :param description: a description of the charge
@@ -274,12 +373,7 @@ class Subscription(models.Model):
         :raises: Http404 if incorrect subscriber, HttpUnprocessableEntity for
             any other 422 error
         """
-        response = self._client.add_fee(self.user.id,name,description,group,
-                amount)
-        if response == 404:
-            raise Http404()
-        elif response == 422:
-            raise HttpUnprocessableEntity()
+        fee.add_fee(self.user, description, amount)
 
 
 class Gift(models.Model):
