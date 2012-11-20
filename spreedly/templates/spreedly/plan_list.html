@@ -9,7 +9,7 @@
 		<h2>
       {% with current_user_subscription=request.user.subscription %}
 			{% if current_user_subscription %}
-		    	Your current subscription is '{{ current_user_subscription.name }}' and its currently {% user.subscription.active|yesno:"Active,Not Active" %}.
+		    	Your current subscription is '{{ current_user_subscription.name }}' and its currently {{ user.subscription.active|yesno:"Active,Not Active" }}.
 			{% else %}
 				Already have a subscription? <a href="{% url 'login' %}">Log In!</a>
 			{% endif %}
@@ -35,7 +35,6 @@
 						<th>{% ifchanged %}{{ plan.plan_type_display }}{% endifchanged %}</th>
 						<td>
 							{{ plan }}
-							{% if current_user_subscription and not current_user_subscription.lifetime %}<a href="{% new_plan_url plan request.user %}">[Switch to this plan]</a>{% endif %}
 						</td>
 						<td>{{ plan.description }}</td>
 						<td>{{ plan.terms }}</td>

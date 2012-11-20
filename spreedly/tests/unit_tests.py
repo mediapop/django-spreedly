@@ -135,7 +135,6 @@ class Resp(object):
         self.status_code = status_code
 
 
-@patch('pyspreedly.api.Client')
 class TestAddFee(TestCase):
     fixtures = ['sites',]
     @classmethod
@@ -169,7 +168,8 @@ class TestAddFee(TestCase):
         self.user.delete()
         self.sclient.cleanup()
 
-    def test_add_fee(self):
+    @patch('pyspreedly.api.Client')
+    def test_add_fee(self, MockClient):
         user_data = {
             'name':'test_subscriber',
             'first_name'    : 'hi',
@@ -182,7 +182,7 @@ class TestAddFee(TestCase):
             'url'           : 'https://www.example.com/',
             }
 
-        self.sclient = Client(settings.SPREEDLY_AUTH_TOKEN,
+        self.sclient = MockClient(settings.SPREEDLY_AUTH_TOKEN,
                 settings.SPREEDLY_SITE_NAME)
         self.sclient.add_fee.return_value = Resp()
         subscriber = Subscription.objects.get_or_create(self.user, self.plan,

@@ -205,7 +205,7 @@ class Fee(models.Model):
         if amount <= 0:
             raise ValueError("Amount must be greater than 0")
         try:
-            if user.plan != self.subscription.plan:
+            if user.subscription.plan != self.plan:
                 raise ValueError("This fee is not for the user's plan")
         except Subscription.DoesNotExist:
                 raise ValueError("This user is not signed up to a plan")

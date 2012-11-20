@@ -14,7 +14,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import (ListView, TemplateView, View, FormView,
-        DetailView, UpdateView, TemplateResponseMixin, ProcessFormView)
+        DetailView, UpdateView)
 from django.views.generic.edit import FormMixin
 from django.core.urlresolvers import reverse
 
@@ -242,6 +242,7 @@ class PlanDetails(DetailView, SubscribeMixin):
     pk_url_kwarg = 'plan_pk'
     slug_url_kwarg = 'plan_pk'
     context_object_name = 'plan'
+    template_name = 'spreedly/plan_details.html'
 
     def get_context_data(self, **kwargs):
         context = DetailView.get_context_data(self, **kwargs)
@@ -252,10 +253,6 @@ class PlanDetails(DetailView, SubscribeMixin):
         return context
 
     def get(self, *args, **kwargs):
-        allow_empty = self.get_allow_empty()
-        if not allow_empty and len(self.object_list) == 0:
-            raise Http404(_(u"Empty list and '%(class_name)s.allow_empty' is False.")
-                          % {'class_name': self.__class__.__name__})
         self.object = self.get_object()
         kwargs['object'] = self.object
         form_class = self.get_form_class()
