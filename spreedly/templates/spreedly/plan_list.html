@@ -1,5 +1,5 @@
+{% load url from future %}
 <!DOCTYPE html>
-{% load spreedly_tags %}
 <html>
 	<head>
 		<title>Subscriptions</title>
@@ -7,10 +7,11 @@
 	<body>
 		<h1>Subscriptions</h1>
 		<h2>
+      {% with current_user_subscription=request.user.subscription %}
 			{% if current_user_subscription %}
-		    	Your current subscription is '{{ current_user_subscription.name }}' and its currently {% if current_user_subscription.active %}Active{% else %}not Active{% endif %}.
+		    	Your current subscription is '{{ current_user_subscription.name }}' and its currently {% user.subscription.active|yesno:"Active,Not Active" %}.
 			{% else %}
-				Already have a subscription? <a href="{{ login }}">Log In!</a>
+				Already have a subscription? <a href="{% url 'login' %}">Log In!</a>
 			{% endif %}
 		</h2>
 
@@ -19,7 +20,7 @@
 				{% if current_user_subscription.lifetime %}
 					You have a lifetime subscription! You'll never have to pay or update :)
 				{% else %}
-					<a href="{% existing_plan_url user %}">Change or update your subscription settings</a>
+					<a href="{{ current_user_subscription.url }}">Change or update your subscription settings</a>
 				{% endif %}
 			</h3>
 		{% endif %}
@@ -55,5 +56,6 @@
 				<p><input type="submit" value="Continue &rarr;"></p>
 			</form>
 		{% endif %}
+    {% endwith %}
 	</body>
 </html>

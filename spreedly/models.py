@@ -230,12 +230,13 @@ class Fee(models.Model):
                              amount=amount, response=response))
             raise HttpUnprocessableEntity()
         try:
-            if response_code == 200:  #XXX Not sure what the code should be as no internet to check atm.
+            if response_code == 201:
                 line_item.successfull = True
                 line_item.save()
             elif spreedly_settings.SPREEDLY_SAVE_ON_FAIL:
+                # This is probably a terrible idea
                 line_item.successfull = False
-                line_item.save()
+                return line_item.save()
         except Exception as e:
             logger.critical(
                     'line_item failed to save: {fee}, {user}'
@@ -278,7 +279,7 @@ class SubscriptionManager(models.Manager):
             for k in data:
                 try:
                     if data[k] is not None:
-                        if subscription.get(k) != data[k]:
+                        if getattr(subscription, k) != data[k]:
                             setattr(subscription,k,data[k])
                 except AttributeError:
                     pass
@@ -324,7 +325,7 @@ class Subscription(models.Model):
             self.user.is_active = True
             self.user.save()
         self.url = urljoin(self._client.base_url,'subscriber_accounts/{token}'.format(token=self.token))
-        super(Subscription, self).save(*args, **kwargs)
+        return super(Subscription, self).save(*args, **kwargs)
 
     @property
     def ending_this_month(self):
@@ -357,6 +358,21 @@ class Subscription(models.Model):
                 pass
         self.save()
         return self
+
+    def update_subscription(self, data):
+        """update a subscription with supplied data"""
+        #TODO calculate surchargs/credits caused by changes.
+        plan = Plan.objects.get(pk=data['subscription_plan_version']['id'])
+        for k in data:
+            try:
+                if data[k] is not None:
+                    if getattr(self, k) != data[k]:
+                        setattr(self,k,data[k])
+            except AttributeError:
+                pass
+        self.plan = plan
+        self.save()
+
 
     def create_complimentary_subscription(self, time, unit, feature_level):
         """ .. py:method:create_complimentary_subscription(time, unit, feature_level)

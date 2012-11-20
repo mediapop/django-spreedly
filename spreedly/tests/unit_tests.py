@@ -5,18 +5,21 @@ from pyspreedly.api import Client
 from django.core.urlresolvers import reverse
 from spreedly.functions import sync_plans
 from spreedly.models import HttpUnprocessableEntity
-from spreedly.models import Plan, Fee, FeeGroup, LineItem
+from spreedly.models import Plan, Fee, FeeGroup, LineItem, Subscription
+from datetime import datetime, timedelta
+from mock import patch
+import ipdb
 
 
 class TestSyncPlans(TestCase):
     def setUp(self):
         user = User.objects.create(username='test')
         self.sclient = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
-    
+
     def tearDown(self):
         # Remove all subscribers
         self.sclient.cleanup()
-    
+
     def test_sync_plans(self):
         # Initial sync
         spreedly_count = len(self.sclient.get_plans())
@@ -125,6 +128,14 @@ class TestFees(TestCase):
         fee_group.delete()
         fee_group2.delete()
 
+
+class Resp(object):
+    def __init__(self, text='hi',status_code=201):
+        self.text = text
+        self.status_code = status_code
+
+
+@patch('pyspreedly.api.Client')
 class TestAddFee(TestCase):
     fixtures = ['sites',]
     @classmethod
@@ -157,3 +168,27 @@ class TestAddFee(TestCase):
         self.fee_group2.delete()
         self.user.delete()
         self.sclient.cleanup()
+
+    def test_add_fee(self):
+        user_data = {
+            'name':'test_subscriber',
+            'first_name'    : 'hi',
+            'last_name'     : 'world',
+            'feature_level' : 'test fees',
+            'active_until'  : datetime.today() + timedelta(days=1),
+            'token'         : 'hello world',
+            'eligible_for_free_trial' : False,
+            'active'        : True,
+            'url'           : 'https://www.example.com/',
+            }
+
+        self.sclient = Client(settings.SPREEDLY_AUTH_TOKEN,
+                settings.SPREEDLY_SITE_NAME)
+        self.sclient.add_fee.return_value = Resp()
+        subscriber = Subscription.objects.get_or_create(self.user, self.plan,
+                data=user_data)
+        line_item = self.fee.add_fee(self.user, "test Stuff", 10)
+        self.assertEquals(line_item.fee, self.fee)
+        self.assertEquals(line_item.user, self.user)
+        self.assertEquals(line_item.amount, 10)
+        self.assertTrue(line_item.successfull)

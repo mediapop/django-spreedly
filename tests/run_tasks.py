@@ -76,3 +76,8 @@ if __name__ == "__main__":
         syncdb()
         migrate()
         sql()
+    else:
+        conf()
+        syncdb()
+        migrate()
+        call_command("shell")
