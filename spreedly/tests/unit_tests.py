@@ -125,35 +125,35 @@ class TestFees(TestCase):
         fee_group.delete()
         fee_group2.delete()
 
-    def test_add_fee(self):
-        fixtures = ['sites',]
-        @classmethod
-        def setUpClass(self):
-            Plan.objects.sync_plans()
+class TestAddFee(TestCase):
+    fixtures = ['sites',]
+    @classmethod
+    def setUpClass(self):
+        Plan.objects.sync_plans()
 
-        def setUp(self):
-            self.sclient = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
-            self.plan = Plan.objects.get(pk=21431)
-            self.user = User.objects.create(username='test')
-            self.client_data = self.sclient.create_subscriber(self.user.id,'test')
-            self.fee_group = FeeGroup.objects.create(name="Test feegroup 1")
-            self.fee_group2 = FeeGroup.objects.create(name="test feegroup 2")
-            self.fee = Fee.objects.create(
-                    plan=self.plan,
-                    name=u"test fee",
-                    group=fee_group,
-                    default_amount=0)
-            self.fee2 = Fee.objects.create(
-                    plan=self.plan,
-                    name=u"test fee 2",
-                    group=fee_group,
-                    default_amount=10)
-            # Get them subscribed to a real Plan
+    def setUp(self):
+        self.sclient = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
+        self.plan = Plan.objects.get(pk=21431)
+        self.user = User.objects.create(username='test')
+        self.client_data = self.sclient.create_subscriber(self.user.id,'test')
+        self.fee_group = FeeGroup.objects.create(name="Test feegroup 1")
+        self.fee_group2 = FeeGroup.objects.create(name="test feegroup 2")
+        self.fee = Fee.objects.create(
+                plan=self.plan,
+                name=u"test fee",
+                group=self.fee_group,
+                default_amount=0)
+        self.fee2 = Fee.objects.create(
+                plan=self.plan,
+                name=u"test fee 2",
+                group=self.fee_group,
+                default_amount=10)
+        # Get them subscribed to a real Plan
 
-        def tearDown(self):
-            self.fee.delete()
-            self.fee2.delete()
-            self.fee_group.delete()
-            self.fee_group2.delete()
-            self.user.delete()
-            self.sclient.cleanup()
+    def tearDown(self):
+        self.fee.delete()
+        self.fee2.delete()
+        self.fee_group.delete()
+        self.fee_group2.delete()
+        self.user.delete()
+        self.sclient.cleanup()
