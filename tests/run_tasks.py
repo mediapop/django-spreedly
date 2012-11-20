@@ -54,7 +54,7 @@ if __name__ == "__main__":
     schemamigration = parser.add_argument_group('migrate')
     schemamigration.add_argument('--schemamigration', action='store_true', 
             default=False, help="preform a schema migration")
-    schema_migrate_opts = schemamigration.add_mutually_exclusive_group(required=False)
+    schema_migrate_opts = schemamigration.add_argument_group()
     schema_migrate_opts.add_argument('--auto',action='store_true')
     schema_migrate_opts.add_argument('--empty',action='store_true')
     schema_migrate_opts.add_argument('--update',action='store_true')

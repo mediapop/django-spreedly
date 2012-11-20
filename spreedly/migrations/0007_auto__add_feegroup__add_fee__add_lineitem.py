@@ -10,8 +10,7 @@ class Migration(SchemaMigration):
     def forwards(self, orm):
         # Adding model 'FeeGroup'
         db.create_table('spreedly_feegroup', (
-            ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('name', self.gf('django.db.models.fields.CharField')(max_length=100)),
+            ('name', self.gf('django.db.models.fields.CharField')(max_length=100, primary_key=True)),
         ))
         db.send_create_signal('spreedly', ['FeeGroup'])
 
@@ -96,8 +95,7 @@ class Migration(SchemaMigration):
         },
         'spreedly.feegroup': {
             'Meta': {'object_name': 'FeeGroup'},
-            'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'name': ('django.db.models.fields.CharField', [], {'max_length': '100'})
+            'name': ('django.db.models.fields.CharField', [], {'max_length': '100', 'primary_key': 'True'})
         },
         'spreedly.gift': {
             'Meta': {'object_name': 'Gift'},
