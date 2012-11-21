@@ -257,7 +257,7 @@ class PlanDetails(DetailView, SubscribeMixin):
         kwargs['object'] = self.object
         form_class = self.get_form_class()
         form = self.get_form(form_class)
-        form.fields['subscription'].widget = forms.HiddenInput
+        form.fields['subscription'].widget = forms.HiddenInput()
         form.fields['subscription'].initial = self.object
         kwargs['form'] = form
         context = self.get_context_data(**kwargs)
@@ -269,4 +269,4 @@ class EditSubscriber(UpdateView):
     form = SubscribeUpdateForm
 
     def dispatch(self, *args, **kwargs):
-        return NotImplemented
+        raise NotImplementedError
