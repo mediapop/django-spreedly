@@ -1,0 +1,362 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>spreedly.forms &mdash; django-spreedly 2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="django-spreedly 2.0 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">django-spreedly 2.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for spreedly.forms</h1><div class="highlight"><pre>
+<span class="kn">import</span> <span class="nn">uuid</span>
+
+<span class="kn">from</span> <span class="nn">django</span> <span class="kn">import</span> <span class="n">forms</span>
+<span class="kn">from</span> <span class="nn">django.conf</span> <span class="kn">import</span> <span class="n">settings</span>
+<span class="kn">from</span> <span class="nn">django.core.mail</span> <span class="kn">import</span> <span class="n">send_mail</span>
+<span class="kn">from</span> <span class="nn">django.contrib.auth.models</span> <span class="kn">import</span> <span class="n">User</span>
+<span class="kn">from</span> <span class="nn">django.contrib.sites.models</span> <span class="kn">import</span> <span class="n">Site</span>
+<span class="kn">from</span> <span class="nn">django.core.urlresolvers</span> <span class="kn">import</span> <span class="n">reverse</span>
+<span class="kn">from</span> <span class="nn">django.template.loader</span> <span class="kn">import</span> <span class="n">render_to_string</span>
+<span class="kn">from</span> <span class="nn">django.utils.translation</span> <span class="kn">import</span> <span class="n">ugettext_lazy</span> <span class="k">as</span> <span class="n">_</span>
+
+<span class="kn">from</span> <span class="nn">spreedly.models</span> <span class="kn">import</span> <span class="n">Plan</span><span class="p">,</span> <span class="n">Gift</span><span class="p">,</span> <span class="n">Subscription</span>
+<span class="kn">from</span> <span class="nn">spreedly.functions</span> <span class="kn">import</span> <span class="n">subscription_url</span><span class="p">,</span> <span class="n">check_trial_eligibility</span><span class="p">,</span> <span class="n">return_url</span>
+<span class="kn">import</span> <span class="nn">spreedly.settings</span> <span class="kn">as</span> <span class="nn">spreedly_settings</span>
+
+<span class="kn">from</span> <span class="nn">pyspreedly.api</span> <span class="kn">import</span> <span class="n">Client</span>
+
+<div class="viewcode-block" id="SubscribeForm"><a class="viewcode-back" href="../../spreedly.html#spreedly.forms.SubscribeForm">[docs]</a><span class="k">class</span> <span class="nc">SubscribeForm</span><span class="p">(</span><span class="n">forms</span><span class="o">.</span><span class="n">Form</span><span class="p">):</span>
+    <span class="n">username</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">max_length</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="bp">True</span>
+    <span class="p">)</span>
+    <span class="n">email</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">EmailField</span><span class="p">(</span>
+        <span class="n">required</span><span class="o">=</span><span class="bp">True</span>
+    <span class="p">)</span>
+    <span class="n">password1</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">label</span><span class="o">=</span><span class="s">&quot;Password&quot;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">PasswordInput</span><span class="p">(),</span>
+    <span class="p">)</span>
+    <span class="n">password2</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">label</span><span class="o">=</span><span class="s">&quot;Password again&quot;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">PasswordInput</span><span class="p">(),</span>
+    <span class="p">)</span>
+    <span class="n">subscription</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span><span class="n">queryset</span><span class="o">=</span><span class="n">Plan</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">enabled</span><span class="o">=</span><span class="bp">True</span><span class="p">),</span> <span class="n">empty_label</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="SubscribeForm.clean"><a class="viewcode-back" href="../../spreedly.html#spreedly.forms.SubscribeForm.clean">[docs]</a>    <span class="k">def</span> <span class="nf">clean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">username</span> <span class="o">=</span>  <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;username&quot;</span><span class="p">)</span>
+        <span class="n">email</span> <span class="o">=</span>     <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;email&quot;</span><span class="p">)</span>
+        <span class="n">pass1</span> <span class="o">=</span>     <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;password1&quot;</span><span class="p">)</span>
+        <span class="n">pass2</span> <span class="o">=</span>     <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;password2&quot;</span><span class="p">)</span>
+        <span class="n">plan</span> <span class="o">=</span>      <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;subscription&quot;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">username</span> <span class="ow">and</span> <span class="n">email</span> <span class="ow">and</span> <span class="n">pass1</span> <span class="ow">and</span> <span class="n">pass2</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">pass1</span> <span class="o">!=</span> <span class="n">pass2</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">forms</span><span class="o">.</span><span class="n">ValidationError</span><span class="p">(</span><span class="n">_</span><span class="p">(</span><span class="s">&quot;You must type the same password each time.&quot;</span><span class="p">))</span>
+            
+            <span class="k">if</span> <span class="n">plan</span><span class="o">.</span><span class="n">is_free_trial_plan</span><span class="p">:</span>
+                <span class="n">existing_users</span> <span class="o">=</span> <span class="n">Subscription</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">user__email</span><span class="o">=</span><span class="n">email</span><span class="p">,</span> <span class="n">trial_eligible</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span><span class="o">.</span><span class="n">count</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">existing_users</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">forms</span><span class="o">.</span><span class="n">ValidationError</span><span class="p">(</span><span class="n">_</span><span class="p">(</span><span class="s">&quot;A user with this email has already had a free trial.&quot;</span><span class="p">))</span>
+            
+            <span class="n">user</span><span class="p">,</span> <span class="n">created</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get_or_create</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="n">username</span><span class="o">.</span><span class="n">lower</span><span class="p">(),</span> <span class="n">defaults</span><span class="o">=</span><span class="p">{</span>
+                <span class="s">&#39;email&#39;</span><span class="p">:</span> <span class="n">email</span><span class="p">,</span>
+                <span class="s">&#39;is_active&#39;</span><span class="p">:</span> <span class="bp">False</span>
+            <span class="p">})</span>
+            
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">created</span> <span class="ow">and</span> <span class="n">user</span><span class="o">.</span><span class="n">is_active</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">forms</span><span class="o">.</span><span class="n">ValidationError</span><span class="p">(</span><span class="n">_</span><span class="p">(</span><span class="s">&quot;Sorry, This username is already taken.&quot;</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="ow">not</span> <span class="n">created</span><span class="p">:</span>
+                <span class="n">user</span><span class="o">.</span><span class="n">email</span> <span class="o">=</span> <span class="n">email</span>
+                <span class="n">user</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span>
+    </div>
+<div class="viewcode-block" id="SubscribeForm.save"><a class="viewcode-back" href="../../spreedly.html#spreedly.forms.SubscribeForm.save">[docs]</a>    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s">&quot;username&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
+        <span class="n">user</span><span class="o">.</span><span class="n">set_password</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s">&quot;password2&quot;</span><span class="p">])</span>
+        <span class="n">user</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+        <span class="n">plan</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s">&quot;subscription&quot;</span><span class="p">]</span>
+        
+        <span class="n">trial</span> <span class="o">=</span> <span class="n">check_trial_eligibility</span><span class="p">(</span><span class="n">plan</span><span class="p">,</span> <span class="n">user</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">trial</span><span class="p">:</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="n">return_url</span><span class="p">(</span><span class="n">plan</span><span class="o">.</span><span class="n">pk</span><span class="p">,</span> <span class="n">user</span><span class="p">,</span> <span class="n">trial</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">url</span> <span class="o">=</span> <span class="n">subscription_url</span><span class="p">(</span><span class="n">plan</span><span class="p">,</span> <span class="n">user</span><span class="p">)</span>
+        
+        <span class="n">send_mail</span><span class="p">(</span>
+            <span class="n">spreedly_settings</span><span class="o">.</span><span class="n">SPREEDLY_CONFIRM_EMAIL_SUBJECT</span><span class="p">,</span>
+            <span class="n">render_to_string</span><span class="p">(</span><span class="n">spreedly_settings</span><span class="o">.</span><span class="n">SPREEDLY_CONFIRM_EMAIL</span><span class="p">,</span> <span class="p">{</span>
+                <span class="s">&#39;plan_name&#39;</span><span class="p">:</span> <span class="n">plan</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="s">&#39;user&#39;</span><span class="p">:</span> <span class="n">user</span><span class="p">,</span>
+                <span class="s">&#39;site&#39;</span><span class="p">:</span> <span class="n">spreedly_settings</span><span class="o">.</span><span class="n">SPREEDLY_SITE_URL</span><span class="p">,</span>
+                <span class="s">&#39;spreedly_url&#39;</span><span class="p">:</span> <span class="n">url</span>
+            <span class="p">}),</span>
+            <span class="n">settings</span><span class="o">.</span><span class="n">DEFAULT_FROM_EMAIL</span><span class="p">,</span>
+            <span class="p">[</span><span class="n">user</span><span class="o">.</span><span class="n">email</span><span class="p">,]</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">reverse</span><span class="p">(</span><span class="s">&#39;spreedly_email_sent&#39;</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">[</span><span class="n">user</span><span class="o">.</span><span class="n">id</span><span class="p">])</span>
+</div></div>
+<div class="viewcode-block" id="SubscribeUpdateForm"><a class="viewcode-back" href="../../spreedly.html#spreedly.forms.SubscribeUpdateForm">[docs]</a><span class="k">class</span> <span class="nc">SubscribeUpdateForm</span><span class="p">(</span><span class="n">forms</span><span class="o">.</span><span class="n">ModelForm</span><span class="p">):</span>
+    <span class="c">#TODO this needs to correctly update a form using pyspreedly.api.client</span>
+<div class="viewcode-block" id="SubscribeUpdateForm.Meta"><a class="viewcode-back" href="../../spreedly.html#spreedly.forms.SubscribeUpdateForm.Meta">[docs]</a>    <span class="k">class</span> <span class="nc">Meta</span><span class="p">:</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">Subscription</span>
+</div></div>
+<div class="viewcode-block" id="GiftRegisterForm"><a class="viewcode-back" href="../../spreedly.html#spreedly.forms.GiftRegisterForm">[docs]</a><span class="k">class</span> <span class="nc">GiftRegisterForm</span><span class="p">(</span><span class="n">forms</span><span class="o">.</span><span class="n">Form</span><span class="p">):</span>
+    <span class="n">username</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">max_length</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="bp">True</span>
+    <span class="p">)</span>
+    <span class="n">email</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">EmailField</span><span class="p">(</span>
+        <span class="n">required</span><span class="o">=</span><span class="bp">True</span>
+    <span class="p">)</span>
+    <span class="n">password1</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">label</span><span class="o">=</span><span class="s">&quot;Password&quot;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">PasswordInput</span><span class="p">(),</span>
+    <span class="p">)</span>
+    <span class="n">password2</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">label</span><span class="o">=</span><span class="s">&quot;Password again&quot;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">PasswordInput</span><span class="p">(),</span>
+    <span class="p">)</span>
+    <span class="n">gift_key</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span><span class="n">max_length</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span> <span class="n">required</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">HiddenInput</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="GiftRegisterForm.clean"><a class="viewcode-back" href="../../spreedly.html#spreedly.forms.GiftRegisterForm.clean">[docs]</a>    <span class="k">def</span> <span class="nf">clean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">username</span> <span class="o">=</span>  <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;username&quot;</span><span class="p">)</span>
+        <span class="n">email</span> <span class="o">=</span>     <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;email&quot;</span><span class="p">)</span>
+        <span class="n">pass1</span> <span class="o">=</span>     <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;password1&quot;</span><span class="p">)</span>
+        <span class="n">pass2</span> <span class="o">=</span>     <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;password2&quot;</span><span class="p">)</span>
+        <span class="n">gift_key</span> <span class="o">=</span>  <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;gift_key&quot;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">username</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s">&#39;username&#39;</span><span class="p">],</span> <span class="n">is_active</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="n">forms</span><span class="o">.</span><span class="n">ValidationError</span><span class="p">(</span><span class="n">_</span><span class="p">(</span><span class="s">&quot;Sorry, This username is already taken.&quot;</span><span class="p">))</span>
+            <span class="k">except</span> <span class="n">User</span><span class="o">.</span><span class="n">DoesNotExist</span><span class="p">:</span>
+                <span class="k">pass</span>
+        <span class="k">if</span> <span class="n">username</span> <span class="ow">and</span> <span class="n">email</span> <span class="ow">and</span> <span class="n">pass1</span> <span class="ow">and</span> <span class="n">pass2</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">pass1</span> <span class="o">!=</span> <span class="n">pass2</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">forms</span><span class="o">.</span><span class="n">ValidationError</span><span class="p">(</span><span class="n">_</span><span class="p">(</span><span class="s">&quot;You must type the same password each time.&quot;</span><span class="p">))</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span>
+    </div>
+<div class="viewcode-block" id="GiftRegisterForm.save"><a class="viewcode-back" href="../../spreedly.html#spreedly.forms.GiftRegisterForm.save">[docs]</a>    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c"># remove any inactive users with this same username</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">old_user</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s">&#39;username&#39;</span><span class="p">],</span> <span class="n">is_active</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+            <span class="n">old_user</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+        <span class="k">except</span> <span class="n">User</span><span class="o">.</span><span class="n">DoesNotExist</span><span class="p">:</span>
+            <span class="k">pass</span>
+        <span class="n">gift</span> <span class="o">=</span> <span class="n">Gift</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">uuid</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s">&quot;gift_key&quot;</span><span class="p">])</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="n">gift</span><span class="o">.</span><span class="n">to_user</span>
+        <span class="n">user</span><span class="o">.</span><span class="n">username</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s">&#39;username&#39;</span><span class="p">]</span>
+        <span class="n">user</span><span class="o">.</span><span class="n">email</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s">&#39;email&#39;</span><span class="p">]</span>
+        <span class="n">user</span><span class="o">.</span><span class="n">set_password</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s">&#39;password1&#39;</span><span class="p">])</span>
+        <span class="n">user</span><span class="o">.</span><span class="n">is_active</span><span class="o">=</span><span class="bp">True</span>
+        <span class="n">user</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+        <span class="c">#update spreedly info</span>
+        <span class="n">client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">SPREEDLY_AUTH_TOKEN</span><span class="p">,</span> <span class="n">settings</span><span class="o">.</span><span class="n">SPREEDLY_SITE_NAME</span><span class="p">)</span>
+        <span class="n">client</span><span class="o">.</span><span class="n">set_info</span><span class="p">(</span><span class="n">user</span><span class="o">.</span><span class="n">pk</span><span class="p">,</span> <span class="n">email</span><span class="o">=</span><span class="n">user</span><span class="o">.</span><span class="n">email</span><span class="p">,</span> <span class="n">screen_name</span><span class="o">=</span><span class="n">user</span><span class="o">.</span><span class="n">username</span><span class="p">)</span>
+        <span class="n">gift</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">user</span>
+</div></div>
+<div class="viewcode-block" id="GiftForm"><a class="viewcode-back" href="../../spreedly.html#spreedly.forms.GiftForm">[docs]</a><span class="k">class</span> <span class="nc">GiftForm</span><span class="p">(</span><span class="n">forms</span><span class="o">.</span><span class="n">Form</span><span class="p">):</span>
+    <span class="n">subscription</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span><span class="n">queryset</span><span class="o">=</span><span class="n">Plan</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">plan_type</span><span class="o">=</span><span class="s">&#39;gift&#39;</span><span class="p">),</span> <span class="n">empty_label</span><span class="o">=</span><span class="bp">None</span><span class="p">)</span>
+    <span class="n">your_name</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">label</span><span class="o">=</span><span class="s">&quot;Your Name&quot;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="bp">True</span>
+    <span class="p">)</span>
+    <span class="n">message</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">label</span><span class="o">=</span><span class="s">&quot;Message&quot;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">Textarea</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;rows&#39;</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span> <span class="s">&#39;cols&#39;</span><span class="p">:</span><span class="mi">55</span><span class="p">})</span>
+    <span class="p">)</span>
+    <span class="n">email</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">EmailField</span><span class="p">(</span>
+        <span class="n">label</span><span class="o">=</span><span class="s">&quot;Email&quot;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="bp">True</span>
+    <span class="p">)</span>
+    <span class="n">email_again</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">EmailField</span><span class="p">(</span>
+        <span class="n">label</span><span class="o">=</span><span class="s">&quot;Email Again&quot;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="bp">True</span>
+    <span class="p">)</span>
+    
+<div class="viewcode-block" id="GiftForm.clean"><a class="viewcode-back" href="../../spreedly.html#spreedly.forms.GiftForm.clean">[docs]</a>    <span class="k">def</span> <span class="nf">clean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">email</span> <span class="o">=</span>     <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;email&quot;</span><span class="p">)</span>
+        <span class="n">email2</span> <span class="o">=</span>    <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;email_again&quot;</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">email</span> <span class="ow">and</span> <span class="n">email2</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">email</span> <span class="o">!=</span> <span class="n">email2</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">forms</span><span class="o">.</span><span class="n">ValidationError</span><span class="p">(</span><span class="n">_</span><span class="p">(</span><span class="s">&quot;The two emails don&#39;t match. Please make sure both are correct.&quot;</span><span class="p">))</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span>
+    </div>
+<div class="viewcode-block" id="GiftForm.save"><a class="viewcode-back" href="../../spreedly.html#spreedly.forms.GiftForm.save">[docs]</a>    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="n">gift_id</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="p">)[:</span><span class="mi">29</span><span class="p">]</span>
+        <span class="n">plan</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s">&quot;subscription&quot;</span><span class="p">]</span>
+        
+        <span class="n">user</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+            <span class="n">username</span><span class="o">=</span><span class="n">gift_id</span><span class="p">,</span>
+            <span class="n">email</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s">&quot;email&quot;</span><span class="p">],</span>
+            <span class="n">is_active</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+            <span class="n">password</span><span class="o">=</span><span class="s">&#39;GIFT&#39;</span>
+        <span class="p">)</span>
+        
+        <span class="n">Gift</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+            <span class="n">from_user</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span>
+            <span class="n">to_user</span><span class="o">=</span><span class="n">user</span><span class="p">,</span>
+            <span class="n">uuid</span> <span class="o">=</span> <span class="n">gift_id</span><span class="p">,</span>
+            <span class="n">plan_name</span><span class="o">=</span><span class="n">plan</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s">&quot;message&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span><span class="n">plan</span><span class="p">,</span> <span class="n">user</span><span class="p">)</span>
+</div></div>
+<div class="viewcode-block" id="PlanModelChoiceField"><a class="viewcode-back" href="../../spreedly.html#spreedly.forms.PlanModelChoiceField">[docs]</a><span class="k">class</span> <span class="nc">PlanModelChoiceField</span><span class="p">(</span><span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">):</span>
+<div class="viewcode-block" id="PlanModelChoiceField.label_from_instance"><a class="viewcode-back" href="../../spreedly.html#spreedly.forms.PlanModelChoiceField.label_from_instance">[docs]</a>    <span class="k">def</span> <span class="nf">label_from_instance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">obj</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">obj</span><span class="o">.</span><span class="n">enabled</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">unicode</span><span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="s">&#39;*</span><span class="si">%s</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span><span class="n">obj</span><span class="p">)</span>
+        </div></div>
+<div class="viewcode-block" id="AdminGiftForm"><a class="viewcode-back" href="../../spreedly.html#spreedly.forms.AdminGiftForm">[docs]</a><span class="k">class</span> <span class="nc">AdminGiftForm</span><span class="p">(</span><span class="n">forms</span><span class="o">.</span><span class="n">Form</span><span class="p">):</span>
+    <span class="n">plan</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ModelChoiceField</span><span class="p">(</span><span class="n">queryset</span><span class="o">=</span><span class="n">Plan</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">enabled</span><span class="p">(),</span>
+        <span class="n">label</span><span class="o">=</span><span class="s">&quot;Plan&quot;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="bp">True</span>
+    <span class="p">)</span>
+    <span class="c">#TODO do something with this</span>
+    <span class="n">feature_level</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span>
+        <span class="n">label</span><span class="o">=</span><span class="s">&quot;Feature Level&quot;</span><span class="p">,</span>
+        <span class="n">choices</span><span class="o">=</span><span class="p">[(</span><span class="n">x</span><span class="p">,</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">set</span><span class="p">(</span><span class="n">Plan</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">values_list</span><span class="p">(</span><span class="s">&#39;feature_level&#39;</span><span class="p">,</span> <span class="n">flat</span><span class="o">=</span><span class="bp">True</span><span class="p">))]</span>
+    <span class="p">)</span>
+    <span class="n">time</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span>
+        <span class="n">label</span><span class="o">=</span><span class="s">&quot;Time&quot;</span><span class="p">,</span>
+        <span class="n">choices</span><span class="o">=</span><span class="p">[(</span><span class="n">i</span><span class="p">,</span><span class="n">i</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span><span class="mi">91</span><span class="p">)]</span>
+    <span class="p">)</span>
+    <span class="n">units</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">ChoiceField</span><span class="p">(</span>
+        <span class="n">label</span><span class="o">=</span><span class="s">&quot;Time Units&quot;</span><span class="p">,</span>
+        <span class="n">choices</span><span class="o">=</span><span class="p">[</span>
+            <span class="p">(</span><span class="s">&#39;days&#39;</span><span class="p">,</span> <span class="s">&#39;Day(s)&#39;</span><span class="p">),</span>
+            <span class="p">(</span><span class="s">&#39;months&#39;</span><span class="p">,</span> <span class="s">&#39;Month(s)&#39;</span><span class="p">)</span>
+        <span class="p">]</span>
+    <span class="p">)</span>
+
+    <span class="n">your_name</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">label</span><span class="o">=</span><span class="s">&quot;Your Name&quot;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="bp">True</span>
+    <span class="p">)</span>
+    <span class="n">message</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">CharField</span><span class="p">(</span>
+        <span class="n">label</span><span class="o">=</span><span class="s">&quot;Message&quot;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+        <span class="n">widget</span><span class="o">=</span><span class="n">forms</span><span class="o">.</span><span class="n">Textarea</span><span class="p">(</span><span class="n">attrs</span><span class="o">=</span><span class="p">{</span><span class="s">&#39;rows&#39;</span><span class="p">:</span><span class="mi">3</span><span class="p">,</span> <span class="s">&#39;cols&#39;</span><span class="p">:</span><span class="mi">55</span><span class="p">})</span>
+    <span class="p">)</span>
+    <span class="n">email</span> <span class="o">=</span> <span class="n">forms</span><span class="o">.</span><span class="n">EmailField</span><span class="p">(</span>
+        <span class="n">label</span><span class="o">=</span><span class="s">&quot;Email&quot;</span><span class="p">,</span>
+        <span class="n">required</span><span class="o">=</span><span class="bp">True</span>
+    <span class="p">)</span>
+
+<div class="viewcode-block" id="AdminGiftForm.clean"><a class="viewcode-back" href="../../spreedly.html#spreedly.forms.AdminGiftForm.clean">[docs]</a>    <span class="k">def</span> <span class="nf">clean</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">AdminGiftForm</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">clean</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s">&#39;gift_id&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">uuid</span><span class="o">.</span><span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="p">)[:</span><span class="mi">29</span><span class="p">]</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span>
+</div>
+<div class="viewcode-block" id="AdminGiftForm.save"><a class="viewcode-back" href="../../spreedly.html#spreedly.forms.AdminGiftForm.save">[docs]</a>    <span class="k">def</span> <span class="nf">save</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">request</span><span class="p">):</span>
+        <span class="n">gift_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s">&#39;gift_id&#39;</span><span class="p">]</span>
+        
+        <span class="n">user</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+            <span class="n">username</span><span class="o">=</span><span class="n">gift_id</span><span class="p">,</span>
+            <span class="n">email</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s">&quot;email&quot;</span><span class="p">],</span>
+            <span class="n">is_active</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+            <span class="n">password</span><span class="o">=</span><span class="s">&#39;GIFT&#39;</span>
+        <span class="p">)</span>
+        
+        <span class="n">Gift</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+            <span class="n">from_user</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span>
+            <span class="n">to_user</span><span class="o">=</span><span class="n">user</span><span class="p">,</span>
+            <span class="n">uuid</span> <span class="o">=</span> <span class="n">gift_id</span><span class="p">,</span>
+            <span class="n">message</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s">&quot;message&quot;</span><span class="p">],</span>
+            <span class="n">plan_name</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s">&quot;plan_name&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">user</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">django-spreedly 2.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, James Rivett-Carnac.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

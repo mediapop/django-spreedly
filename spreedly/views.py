@@ -24,8 +24,8 @@ from spreedly.forms import SubscribeForm, GiftRegisterForm, AdminGiftForm, Subsc
 from spreedly import signals
 
 class PlanList(ListView, FormMixin):
-    """.. py:class:: PlanList
-    inherits from :py:cls:`ListView` and :py:cls:`FormMixin`, hybrid list and
+    """
+    inherits from :py:class:`ListView` and :py:class:`FormMixin`, hybrid list and
     subscription entry view.
     default template name is `spreedly_plan_list.html`,
     object_list name is `plans`
@@ -37,6 +37,11 @@ class PlanList(ListView, FormMixin):
     form_class = SubscribeForm
 
     def get_context_data(self, object_list, **kwargs):
+        """
+            Adds form and object list plus whatever else is passed as a kwarg
+            to the context.
+            :param object_list: list of :py:class:`Plan`s (actually queryset)
+            """
         context = ListView.get_context_data(self, object_list=object_list)
         context.update(FormMixin.get_context_data(self, **kwargs))
         if self.request.user.is_authenticated():
@@ -46,6 +51,9 @@ class PlanList(ListView, FormMixin):
         return context
 
     def get_queryset(self):
+        """
+            Gets and caches the plan list for 1 day
+        """
         cache_key = 'spreedly_plans_list'
         plans = cache.get(cache_key)
         if not plans:
@@ -58,6 +66,9 @@ class PlanList(ListView, FormMixin):
         return reverse('spreedly_email_sent', args=[self.request.user_id])
 
     def get(self, *args, **kwargs):
+        """
+            Gets the form and object list and returns a rendered template
+        """
         form_class = self.get_form_class()
         form = self.get_form(form_class)
         self.object_list = self.get_queryset()
@@ -85,146 +96,16 @@ class PlanList(ListView, FormMixin):
             return self.form_invalid(form)
 
 
-def plan_list(request, extra_context=None, **kwargs):
-    sub = None
-    if request.user.is_authenticated():
-        try:
-            sub = Subscription.objects.get(user=request.user)
-        except Subscription.DoesNotExist:
-            pass
-    
-    # cache the subscription list from spreedly for a day
-    cache_key = 'spreedly_plans_list'
-    plans = cache.get(cache_key)
-    if not plans:
-        sync_plans()
-        plans = list(Plan.objects.enabled())
-        cache.set(cache_key, plans, 60*60*24)
-    
-    # deal with the form
-    form = SubscribeForm(request.POST or None)
-    if form.is_valid():
-        redirect_url = form.save()
-        return HttpResponseRedirect(redirect_url)
-    
-    our_context={
-        'current_user_subscription': sub,
-        'site': settings.SPREEDLY_SITE_NAME,
-        'login': settings.LOGIN_URL,
-        'plans': plans,
-        'request': request,
-        'form': form
-    }
-    if extra_context:
-        our_context.update(extra_context)
-    context = RequestContext(request)
-    for key, value in our_context.items():
-        context[key] = callable(value) and value() or value
-    return render_to_response(
-        spreedly_settings.SPREEDLY_LIST_TEMPLATE,
-        kwargs,
-        context_instance=context
-    )
-
-
-class AdminGift(FormView):
-    form = AdminGiftForm
-    template_name = 'spreedly/admin_gift.html'
-
-    @method_decorator(staff_member_required)
-    def dispatch(self, *args, **kwargs):
-        return super(AdminGift, self).dispatch(*args, **kwargs)
-
-    def form_valid(self, form):
-        user = form.save(request)
-
-        subscriber = Subscription.objects.get_or_create(user,
-                form.cleaned_data['plan'])  # No data -> get from client
-        subscriber.create_complimentary_subscription(form.cleaned_data['time'],
-                form.cleaned_data['units'], form.cleaned_data['feature_level'])
-        user.gifts_received.latest('id').send_activation_email()
-        return super(AdminGift, self).form_valid(form)
-
-
-@staff_member_required
-def admin_gift(request):
-    if request.method == 'POST':
-        form = AdminGiftForm(request.POST)
-        if form.is_valid():
-            user = form.save(request)
-            
-            client = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
-            client.create_subscriber(user.pk, user.email)
-            client.create_complimentary_subscription(user.pk, form.cleaned_data['time'], form.cleaned_data['units'], form.cleaned_data['feature_level'])
-            user.gifts_received.latest('id').send_activation_email()
-            get_subscription(user)
-    else:
-        form = AdminGiftForm()
-    
-    
-    return render_to_response(
-        spreedly_settings.SPREEDLY_ADMIN_GIFT_TEMPLATE,
-        {'form': form},
-        context_instance=RequestContext(request),
-    )
-
-
-def gift_sign_up(request, gift_id, extra_context=None, **kwargs):
-    try:
-        gift = Gift.objects.get(uuid=gift_id)
-    except Gift.DoesNotExist:
-        raise Http404('Requested gift is not valid')
-    
-    if request.method == 'POST':
-        form = GiftRegisterForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            
-            signals.gift_accepted.send(sender=user)
-            
-            return HttpResponseRedirect('/')
-    else:
-        form = GiftRegisterForm(initial={
-            'gift_key': gift_id
-        })
-
-    our_context = {
-        'request': request,
-        'form': form,
-    }
-
-    if extra_context:
-        our_context.update(extra_context)
-    context = RequestContext(request)
-    for key, value in our_context.items():
-        context[key] = callable(value) and value() or value
-    return render_to_response(
-        spreedly_settings.SPREEDLY_GIFT_REGISTER_TEMPLATE,
-        kwargs,
-        context_instance=context
-    )
-
-
 class EmailSent(TemplateView):
+    """
+        A thankyou page for after registration saying an email has been sent
+    """
     template_name = 'spreedly/email_sent.html'
 
     def get_context_data(self, *args, **kwargs):
         self.context_data = super(EmailSent, self).get_context_data(*args, **kwargs)
         self.context_data['user'] = get_object_or_404(User, pk=self.kwargs['user_id'])
         return self.context_data
-
-def email_sent(request, user_id):
-    try:
-        user = User.objects.get(id=user_id)
-    except User.DoesNotExist:
-        raise Http404
-    
-    return render_to_response(
-        spreedly_settings.SPREEDLY_EMAIL_SENT_TEMPLATE, {
-            'request': request,
-            'user': user
-        }
-    )
 
 
 class SpreedlyReturn(TemplateView):
@@ -244,44 +125,6 @@ class SpreedlyReturn(TemplateView):
             subscription = Subscription.objects.get_or_create(user, plan)
         self.context_data['subscription'] = subscription
         return self.context_data
-
-def spreedly_return(request, user_id, plan_pk=None, extra_context=None, **kwargs):
-    try:
-        user = User.objects.get(id=user_id)
-    except User.DoesNotExist:
-        raise Http404
-    
-    if plan_pk:
-        plan = Plan.objects.get(pk=plan_pk)
-        
-        if plan.plan_type == 'gift':
-            Gift.objects.get(to_user=user_id).send_activation_email()
-        
-        if request.GET.has_key('trial'):
-            start_free_trial(plan, user)
-        
-    subscription = get_subscription(user)
-    
-    our_context = {
-        'subscription': subscription,
-        'request': request,
-        'login_url': settings.LOGIN_URL
-    }
-    if extra_context:
-        our_context.update(extra_context)
-    context = RequestContext(request)
-    for key, value in our_context.items():
-        context[key] = callable(value) and value() or value
-    return render_to_response(
-        spreedly_settings.SPREEDLY_RETURN_TEMPLATE,
-        kwargs,
-        context_instance=context
-    )
-
-@login_required
-def my_subscription(request):
-    plan = request.user.subscription.plan
-    return SpreedlyReturn.as_view(request, user_id=request.user.id, plan_pk=plan)
 
 
 @csrf_exempt
@@ -317,7 +160,7 @@ def spreedly_listener(request):
 
 
 class SubscriptionDetails(DetailView):
-    """ .. py:class:Subscription
+    """
     view to see subscription details.  takes subscription id as an optional
     parameter.  if it is not there return the user's subscription if available,
     if not 404.  if user.is_staff() - then you can see any Subscription details.

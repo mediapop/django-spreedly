@@ -1,0 +1,66 @@
+spreedly Package
+================
+
+:mod:`forms` Module
+-------------------
+
+.. automodule:: spreedly.forms
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`functions` Module
+-----------------------
+
+.. automodule:: spreedly.functions
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`middleware` Module
+------------------------
+
+.. automodule:: spreedly.middleware
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`models` Module
+--------------------
+
+.. automodule:: spreedly.models
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`settings` Module
+----------------------
+
+.. automodule:: spreedly.settings
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`signals` Module
+---------------------
+
+.. automodule:: spreedly.signals
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`urls` Module
+------------------
+
+.. automodule:: spreedly.urls
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`views` Module
+-------------------
+
+.. automodule:: spreedly.views
+    :members:
+    :undoc-members:
+    :show-inheritance:

@@ -1,0 +1,254 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>spreedly Package &mdash; django-spreedly 2.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="django-spreedly 2.0 documentation" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="index.html">django-spreedly 2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="spreedly-package">
+<h1>spreedly Package<a class="headerlink" href="#spreedly-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="module-spreedly.models">
+<span id="models-module"></span><h2><tt class="xref py py-mod docutils literal"><span class="pre">models</span></tt> Module<a class="headerlink" href="#module-spreedly.models" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="spreedly.models.Gift">
+<em class="property">class </em><tt class="descclassname">spreedly.models.</tt><tt class="descname">Gift</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/spreedly/models.html#Gift"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spreedly.models.Gift" title="Permalink to this definition">¶</a></dt>
+<dd><p>Not tested or really implemented in version 2</p>
+</dd></dl>
+
+<dl class="class">
+<dt id="spreedly.models.Plan">
+<em class="property">class </em><tt class="descclassname">spreedly.models.</tt><tt class="descname">Plan</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/spreedly/models.html#Plan"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spreedly.models.Plan" title="Permalink to this definition">¶</a></dt>
+<dd><p>Subscription plan</p>
+<dl class="method">
+<dt id="spreedly.models.Plan.get_return_url">
+<tt class="descname">get_return_url</tt><big>(</big><em>user</em><big>)</big><a class="reference internal" href="_modules/spreedly/models.html#Plan.get_return_url"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spreedly.models.Plan.get_return_url" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get the return url for when they return from signing up for a
+<a class="reference internal" href="#spreedly.models.Plan" title="spreedly.models.Plan"><tt class="xref py py-class docutils literal"><span class="pre">Plan</span></tt></a>.
+:param user: <tt class="xref py py-class docutils literal"><span class="pre">auth.User</span></tt> to get the</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spreedly.models.Plan.start_trial">
+<tt class="descname">start_trial</tt><big>(</big><em>user</em><big>)</big><a class="reference internal" href="_modules/spreedly/models.html#Plan.start_trial"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spreedly.models.Plan.start_trial" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check if a user is eligibile for a trial on this plan, and if so,
+start a plan.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>user</strong> &#8211; user object to check</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">py:class:<cite>Subscription</cite></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises :</th><td class="field-body">py:exc:<cite>Plan.NotEligibile</cite> if the user is not eligibile</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="spreedly.models.Plan.subscription_url">
+<tt class="descname">subscription_url</tt><big>(</big><em>user</em><big>)</big><a class="reference internal" href="_modules/spreedly/models.html#Plan.subscription_url"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spreedly.models.Plan.subscription_url" title="Permalink to this definition">¶</a></dt>
+<dd><p>get the url for the subscription details
+:param user: <tt class="xref py py-class docutils literal"><span class="pre">auth.User</span></tt> to get this for</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spreedly.models.Plan.trial_eligible">
+<tt class="descname">trial_eligible</tt><big>(</big><em>user</em><big>)</big><a class="reference internal" href="_modules/spreedly/models.html#Plan.trial_eligible"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spreedly.models.Plan.trial_eligible" title="Permalink to this definition">¶</a></dt>
+<dd><p>Is a customer/user eligibile for a trial?
+:param user: <tt class="xref py py-class docutils literal"><span class="pre">auth.User</span></tt></p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="spreedly.models.PlanManager">
+<em class="property">class </em><tt class="descclassname">spreedly.models.</tt><tt class="descname">PlanManager</tt><a class="reference internal" href="_modules/spreedly/models.html#PlanManager"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spreedly.models.PlanManager" title="Permalink to this definition">¶</a></dt>
+<dd><p>Manager that handles syncing plans and finding enabled plans</p>
+<dl class="method">
+<dt id="spreedly.models.PlanManager.enabled">
+<tt class="descname">enabled</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/spreedly/models.html#PlanManager.enabled"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spreedly.models.PlanManager.enabled" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Returns all enabled <tt class="xref py py-class docutils literal"><span class="pre">Plans</span></tt></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="spreedly.models.PlanManager.sync_plans">
+<tt class="descname">sync_plans</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/spreedly/models.html#PlanManager.sync_plans"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spreedly.models.PlanManager.sync_plans" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets a full list of plans from spreedly, and updates the local db
+to match it</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="spreedly.models.Subscription">
+<em class="property">class </em><tt class="descclassname">spreedly.models.</tt><tt class="descname">Subscription</tt><big>(</big><em>*args</em>, <em>**kwargs</em><big>)</big><a class="reference internal" href="_modules/spreedly/models.html#Subscription"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spreedly.models.Subscription" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class that manages the details for a specific <tt class="xref py py-class docutils literal"><span class="pre">auth.User</span></tt>&#8216;s
+subscription to a plan.  Since a user can only have one subscription,
+this is sometimes treated as a user profile class.</p>
+<dl class="method">
+<dt id="spreedly.models.Subscription.add_fee">
+<tt class="descname">add_fee</tt><big>(</big><em>name</em>, <em>description</em>, <em>group</em>, <em>amount</em><big>)</big><a class="reference internal" href="_modules/spreedly/models.html#Subscription.add_fee"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spreedly.models.Subscription.add_fee" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a fee to the subscription
+:param name: the name of the fee (eg - Excess Bandwidth Charge)
+:param description: a description of the charge
+:param group: a group to add this charge too
+:param amount: the amount the charge is for
+:returns: None
+:raises: Http404 if incorrect subscriber, HttpUnprocessableEntity for any other 422 error</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spreedly.models.Subscription.allow_free_trial">
+<tt class="descname">allow_free_trial</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/spreedly/models.html#Subscription.allow_free_trial"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spreedly.models.Subscription.allow_free_trial" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allow a free Trial
+:returns: <a class="reference internal" href="#spreedly.models.Subscription" title="spreedly.models.Subscription"><tt class="xref py py-class docutils literal"><span class="pre">Subscription</span></tt></a>
+:raises: <tt class="xref py py-class docutils literal"><span class="pre">Exception</span></tt> (of some kind) if bad juju</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spreedly.models.Subscription.create_complimentary_subscription">
+<tt class="descname">create_complimentary_subscription</tt><big>(</big><em>time</em>, <em>unit</em>, <em>feature_level</em><big>)</big><a class="reference internal" href="_modules/spreedly/models.html#Subscription.create_complimentary_subscription"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spreedly.models.Subscription.create_complimentary_subscription" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Raises :</th><td class="field-body"><tt class="xref py py-exc docutils literal"><span class="pre">NotImplementedError</span></tt> cause it isn&#8217;t implemented</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="spreedly.models.Subscription.ending_this_month">
+<tt class="descname">ending_this_month</tt><a class="reference internal" href="_modules/spreedly/models.html#Subscription.ending_this_month"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spreedly.models.Subscription.ending_this_month" title="Permalink to this definition">¶</a></dt>
+<dd><p>Will this plan end within the next 30 days</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="spreedly.models.Subscription.subscription_active">
+<tt class="descname">subscription_active</tt><a class="reference internal" href="_modules/spreedly/models.html#Subscription.subscription_active"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spreedly.models.Subscription.subscription_active" title="Permalink to this definition">¶</a></dt>
+<dd><p>gets the status based on current active status and active_until</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="spreedly.models.Subscription.subscription_url">
+<tt class="descname">subscription_url</tt><big>(</big><em>user</em><big>)</big><a class="reference internal" href="_modules/spreedly/models.html#Subscription.subscription_url"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spreedly.models.Subscription.subscription_url" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Raises :</th><td class="field-body"><tt class="xref py py-exc docutils literal"><span class="pre">NotImplementedError</span></tt></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">spreedly Package</a><ul>
+<li><a class="reference internal" href="#module-spreedly.models"><tt class="docutils literal"><span class="pre">models</span></tt> Module</a></li>
+</ul>
+</li>
+</ul>
+
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/models.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="index.html">django-spreedly 2.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, James Rivett-Carnac.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

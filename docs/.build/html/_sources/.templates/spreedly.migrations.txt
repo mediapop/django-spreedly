@@ -1,0 +1,51 @@
+migrations Package
+==================
+
+:mod:`0001_initial` Module
+--------------------------
+
+.. automodule:: spreedly.migrations.0001_initial
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`0002_rename_fields_plan_force_renew__duration__spreedly_id` Module
+------------------------------------------------------------------------
+
+.. automodule:: spreedly.migrations.0002_rename_fields_plan_force_renew__duration__spreedly_id
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`0003_auto__chg_field_plan_description` Module
+---------------------------------------------------
+
+.. automodule:: spreedly.migrations.0003_auto__chg_field_plan_description
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`0004_auto__add_field_subscription_plan__add_field_subscription_url` Module
+--------------------------------------------------------------------------------
+
+.. automodule:: spreedly.migrations.0004_auto__add_field_subscription_plan__add_field_subscription_url
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`0005_rename__trial_elegible` Module
+-----------------------------------------
+
+.. automodule:: spreedly.migrations.0005_rename__trial_elegible
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+:mod:`0006_auto__chg_field_subscription_plan` Module
+----------------------------------------------------
+
+.. automodule:: spreedly.migrations.0006_auto__chg_field_subscription_plan
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
