@@ -26,13 +26,19 @@ class HttpUnprocessableEntity(Exception):
 
 
 class PlanManager(models.Manager):
+    """
+        Manager that handles syncing plans and finding enabled plans
+    """
     def enabled(self):
+        """
+            :returns: Returns all enabled :py:class:`Plans`
+        """
         return self.model.objects.filter(enabled=True)
 
     def sync_plans(self):
         """
-        Gets a full list of plans from spreedly, and updates the local db
-        to match it
+            Gets a full list of plans from spreedly, and updates the local db
+            to match it
         """
         client = api.Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
 
@@ -59,7 +65,8 @@ PLAN_TYPES = (
 
 class Plan(models.Model):
     '''
-    Subscription plan
+        Subscription plan
+
     '''
     id = models.IntegerField(db_index=True, primary_key=True,
             verbose_name="Spreedly ID",
@@ -107,7 +114,11 @@ class Plan(models.Model):
         return self.name
 
     def trial_eligible(self, user):
-        """Is a customer/user eligibile for a trial?"""
+        """
+            Is a customer/user eligibile for a trial?
+            :param user: :py:class:`auth.User`
+
+            """
         try:
             subscription = user.subscription
             if subscription.plan == self and subscription.eligible_for_free_trial:
@@ -118,11 +129,14 @@ class Plan(models.Model):
             return self.is_free_trial_plan
 
     def start_trial(self, user):
-        """Check if a user is eligibile for a trial on this plan, and if so,
-        start a plan
-        :param user: user object to check
-        :returns: py:class:`Subscription`
-        :raises: py:class:`Plan.NotEligibile` if the user is not eligibile
+        """
+            Check if a user is eligibile for a trial on this plan, and if so,
+            start a plan.
+
+            :param user: user object to check
+            :returns: py:class:`Subscription`
+            :raises: py:exc:`Plan.NotEligibile` if the user is not eligibile
+
         """
         if self.trial_eligible(user):
             response = self._client.subscribe(user.id, self.id)
@@ -145,12 +159,23 @@ class Plan(models.Model):
         return self.plan_type == "free_trial"
 
     def get_return_url(self, user):
+        """
+            Get the return url for when they return from signing up for a
+            :py:class:`Plan`.
+            :param user: :py:class:`auth.User` to get the
+
+            """
         site = Site.objects.get(pk=settings.SITE_ID)
         base_url = 'https://{site.domain}/'.format(site=site)
         url = urljoin(base_url, reverse('spreedly_return', args=[user.id, self.id]))
         return url
 
     def subscription_url(self,user):
+        """
+            get the url for the subscription details
+            :param user: :py:class:`auth.User` to get this for
+
+            """
         try:
             token = user.subscription.token
         except (AttributeError, Subscription.DoesotExist):
@@ -161,12 +186,13 @@ class Plan(models.Model):
 
 class SubscriptionManager(models.Manager):
     def get_or_create(self, user, plan=None, data=None):
-        """ .. py:method:: get_or_create(user, plan, data)
-        get or create a subscription based on a user, plan and data passed
-        :param user: py:class:`auth.User`
-        :param plan: py:class:`Plan`
-        :param data: python dict containing the data as returned from spreedly
-        :returns: py:class:`Subscription`
+        """
+            get or create a subscription based on a user, plan and data passed
+            :param user: py:class:`auth.User`
+            :param plan: py:class:`Plan`
+            :param data: python dict containing the data as returned from spreedly
+            :returns: py:class:`Subscription`
+
         """
         try:
             subscription = self.get(user=user,plan=plan)
@@ -189,6 +215,12 @@ class SubscriptionManager(models.Manager):
 
 
 class Subscription(models.Model):
+    """
+        Class that manages the details for a specific :py:class:`auth.User`'s
+        subscription to a plan.  Since a user can only have one subscription,
+        this is sometimes treated as a user profile class.
+
+        """
     name = models.CharField(max_length=100, blank=True)
 
     user = models.OneToOneField('auth.User', primary_key=True)
@@ -227,24 +259,35 @@ class Subscription(models.Model):
 
     @property
     def ending_this_month(self):
-        """Will this plan end within the next 30 days"""
+        """
+            Will this plan end within the next 30 days
+
+            """
         return datetime.today() <= self.active_until <= datetime.today() + timedelta(days=30)
 
     @property
     def subscription_active(self):
-        '''gets the status based on current active status and active_until'''
+        '''
+            gets the status based on current active status and active_until
+
+            '''
         if self.active and (self.active_until > datetime.today() or self.active_until == None):
             return True
         return False
 
     def subscription_url(self, user):
+        '''
+            :raises: :py:exc:`NotImplementedError`
+
+            '''
         raise NotImplementedError()
 
     def allow_free_trial(self):
-        """ .. py:method:: allow_free_trial()
-        Allow a free Trial
-        :returns: :py:class:`Subscription`
-        :raises: :py:class:`Exception` (of some kind) if bad juju
+        """
+            Allow a free Trial
+            :returns: :py:class:`Subscription`
+            :raises: :py:class:`Exception` (of some kind) if bad juju
+
         """
         response  = self._client.allow_free_trial(self.user.id)
         for k in response:
@@ -258,21 +301,22 @@ class Subscription(models.Model):
         return self
 
     def create_complimentary_subscription(self, time, unit, feature_level):
-        """ .. py:method:create_complimentary_subscription(time, unit, feature_level)
-        :raises: :py:cls: `NotImplementedError` cause it isn't implemented
+        """
+            :raises: :py:exc:`NotImplementedError` cause it isn't implemented
+
         """
         raise NotImplementedError()
 
     def add_fee(self, name, description, group, amount):
-        """ .. py:method:: add_fee(name, description, group, ammount)
-        Add a fee to the subscription
-        :param name: the name of the fee (eg - Excess Bandwidth Charge)
-        :param description: a description of the charge
-        :param group: a group to add this charge too
-        :param amount: the amount the charge is for
-        :returns: None
-        :raises: Http404 if incorrect subscriber, HttpUnprocessableEntity for
-            any other 422 error
+        """
+            Add a fee to the subscription
+            :param name: the name of the fee (eg - Excess Bandwidth Charge)
+            :param description: a description of the charge
+            :param group: a group to add this charge too
+            :param amount: the amount the charge is for
+            :returns: None
+            :raises: Http404 if incorrect subscriber, HttpUnprocessableEntity for any other 422 error
+
         """
         response = self._client.add_fee(self.user.id,name,description,group,
                 amount)
@@ -283,6 +327,9 @@ class Subscription(models.Model):
 
 
 class Gift(models.Model):
+    """
+        Not tested or really implemented in version 2
+        """
     uuid = models.CharField(max_length=32, unique=True, db_index=True)
 
     from_user = models.ForeignKey(User, related_name='gifts_sent')

@@ -1,0 +1,456 @@
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>spreedly.views &mdash; django-spreedly 2.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/default.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '2.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="top" title="django-spreedly 2.0 documentation" href="../../index.html" />
+    <link rel="up" title="Module code" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">django-spreedly 2.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for spreedly.views</h1><div class="highlight"><pre>
+<span class="kn">from</span> <span class="nn">django.http</span> <span class="kn">import</span> <span class="n">Http404</span><span class="p">,</span> <span class="n">HttpResponse</span><span class="p">,</span> <span class="n">HttpResponseRedirect</span>
+<span class="kn">from</span> <span class="nn">django.core.exceptions</span> <span class="kn">import</span> <span class="n">SuspiciousOperation</span>
+<span class="kn">from</span> <span class="nn">django.utils.decorators</span> <span class="kn">import</span> <span class="n">classonlymethod</span>
+<span class="kn">from</span> <span class="nn">django.utils.decorators</span> <span class="kn">import</span> <span class="n">method_decorator</span>
+<span class="kn">from</span> <span class="nn">django.utils.translation</span> <span class="kn">import</span> <span class="n">ugettext_lazy</span> <span class="k">as</span> <span class="n">_</span>
+<span class="kn">from</span> <span class="nn">django.shortcuts</span> <span class="kn">import</span> <span class="n">render_to_response</span><span class="p">,</span> <span class="n">get_object_or_404</span>
+<span class="kn">from</span> <span class="nn">django.contrib.auth.models</span> <span class="kn">import</span> <span class="n">User</span>
+<span class="kn">from</span> <span class="nn">django.template</span> <span class="kn">import</span> <span class="n">RequestContext</span>
+<span class="kn">from</span> <span class="nn">django.core.cache</span> <span class="kn">import</span> <span class="n">cache</span>
+<span class="kn">from</span> <span class="nn">django.conf</span> <span class="kn">import</span> <span class="n">settings</span>
+<span class="kn">from</span> <span class="nn">django.contrib.auth</span> <span class="kn">import</span> <span class="n">authenticate</span><span class="p">,</span> <span class="n">login</span>
+<span class="kn">from</span> <span class="nn">django.contrib.auth.decorators</span> <span class="kn">import</span> <span class="n">login_required</span>
+<span class="kn">from</span> <span class="nn">django.contrib.admin.views.decorators</span> <span class="kn">import</span> <span class="n">staff_member_required</span>
+<span class="kn">from</span> <span class="nn">django.views.decorators.csrf</span> <span class="kn">import</span> <span class="n">csrf_exempt</span>
+<span class="kn">from</span> <span class="nn">django.views.generic</span> <span class="kn">import</span> <span class="n">ListView</span><span class="p">,</span> <span class="n">TemplateView</span><span class="p">,</span> <span class="n">View</span><span class="p">,</span> <span class="n">FormView</span><span class="p">,</span> <span class="n">DetailView</span><span class="p">,</span> <span class="n">UpdateView</span>
+<span class="kn">from</span> <span class="nn">django.views.generic.edit</span> <span class="kn">import</span> <span class="n">FormMixin</span>
+<span class="kn">from</span> <span class="nn">django.core.urlresolvers</span> <span class="kn">import</span> <span class="n">reverse</span>
+
+<span class="kn">from</span> <span class="nn">pyspreedly.api</span> <span class="kn">import</span> <span class="n">Client</span>
+<span class="kn">from</span> <span class="nn">spreedly.functions</span> <span class="kn">import</span> <span class="n">sync_plans</span><span class="p">,</span> <span class="n">get_subscription</span><span class="p">,</span> <span class="n">start_free_trial</span>
+<span class="kn">from</span> <span class="nn">spreedly.models</span> <span class="kn">import</span> <span class="n">Plan</span><span class="p">,</span> <span class="n">Subscription</span><span class="p">,</span> <span class="n">Gift</span>
+<span class="kn">import</span> <span class="nn">spreedly.settings</span> <span class="kn">as</span> <span class="nn">spreedly_settings</span>
+<span class="kn">from</span> <span class="nn">spreedly.forms</span> <span class="kn">import</span> <span class="n">SubscribeForm</span><span class="p">,</span> <span class="n">GiftRegisterForm</span><span class="p">,</span> <span class="n">AdminGiftForm</span><span class="p">,</span> <span class="n">SubscribeUpdateForm</span>
+<span class="kn">from</span> <span class="nn">spreedly</span> <span class="kn">import</span> <span class="n">signals</span>
+
+<div class="viewcode-block" id="PlanList"><a class="viewcode-back" href="../../views.html#spreedly.views.PlanList">[docs]</a><span class="k">class</span> <span class="nc">PlanList</span><span class="p">(</span><span class="n">ListView</span><span class="p">,</span> <span class="n">FormMixin</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;.. py:class:: PlanList</span>
+<span class="sd">    inherits from :py:cls:`ListView` and :py:cls:`FormMixin`, hybrid list and</span>
+<span class="sd">    subscription entry view.</span>
+<span class="sd">    default template name is `spreedly_plan_list.html`,</span>
+<span class="sd">    object_list name is `plans`</span>
+<span class="sd">    cache&#39;s plans for 24 hours</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s">&quot;spreedly/plan_list.html&quot;</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Plan</span>
+    <span class="n">context_object_name</span> <span class="o">=</span> <span class="s">&#39;plans&#39;</span>
+    <span class="n">form_class</span> <span class="o">=</span> <span class="n">SubscribeForm</span>
+
+<div class="viewcode-block" id="PlanList.get_context_data"><a class="viewcode-back" href="../../views.html#spreedly.views.PlanList.get_context_data">[docs]</a>    <span class="k">def</span> <span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">object_list</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="n">ListView</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">object_list</span><span class="o">=</span><span class="n">object_list</span><span class="p">)</span>
+        <span class="n">context</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">FormMixin</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">))</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">is_authenticated</span><span class="p">():</span>
+            <span class="n">context</span><span class="p">[</span><span class="s">&#39;current_user_subscription&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">,</span> <span class="s">&#39;subscription&#39;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">context</span><span class="p">[</span><span class="s">&#39;current_user_subscription&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">None</span>
+        <span class="k">return</span> <span class="n">context</span>
+</div>
+<div class="viewcode-block" id="PlanList.get_queryset"><a class="viewcode-back" href="../../views.html#spreedly.views.PlanList.get_queryset">[docs]</a>    <span class="k">def</span> <span class="nf">get_queryset</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">cache_key</span> <span class="o">=</span> <span class="s">&#39;spreedly_plans_list&#39;</span>
+        <span class="n">plans</span> <span class="o">=</span> <span class="n">cache</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">cache_key</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">plans</span><span class="p">:</span>
+            <span class="n">Plan</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">sync_plans</span><span class="p">()</span>
+            <span class="n">plans</span> <span class="o">=</span> <span class="n">Plan</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">enabled</span><span class="p">()</span>
+            <span class="n">cache</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">cache_key</span><span class="p">,</span> <span class="n">plans</span><span class="p">,</span> <span class="mi">60</span><span class="o">*</span><span class="mi">60</span><span class="o">*</span><span class="mi">24</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">plans</span>
+</div>
+<div class="viewcode-block" id="PlanList.get_success_url"><a class="viewcode-back" href="../../spreedly.html#spreedly.views.PlanList.get_success_url">[docs]</a>    <span class="k">def</span> <span class="nf">get_success_url</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">reverse</span><span class="p">(</span><span class="s">&#39;spreedly_email_sent&#39;</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user_id</span><span class="p">])</span>
+</div>
+<div class="viewcode-block" id="PlanList.get"><a class="viewcode-back" href="../../views.html#spreedly.views.PlanList.get">[docs]</a>    <span class="k">def</span> <span class="nf">get</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="n">form_class</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_form_class</span><span class="p">()</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_form</span><span class="p">(</span><span class="n">form_class</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">object_list</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_queryset</span><span class="p">()</span>
+        <span class="n">allow_empty</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_allow_empty</span><span class="p">()</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">allow_empty</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">object_list</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">Http404</span><span class="p">(</span><span class="n">_</span><span class="p">(</span><span class="s">u&quot;Empty list and &#39;</span><span class="si">%(class_name)s</span><span class="s">.allow_empty&#39; is False.&quot;</span><span class="p">)</span>
+                          <span class="o">%</span> <span class="p">{</span><span class="s">&#39;class_name&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">__class__</span><span class="o">.</span><span class="n">__name__</span><span class="p">})</span>
+        <span class="n">context</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="n">object_list</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">object_list</span><span class="p">,</span> <span class="n">form</span><span class="o">=</span><span class="n">form</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">render_to_response</span><span class="p">(</span><span class="n">context</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="PlanList.form_valid"><a class="viewcode-back" href="../../spreedly.html#spreedly.views.PlanList.form_valid">[docs]</a>    <span class="k">def</span> <span class="nf">form_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">form</span><span class="p">):</span>
+        <span class="n">form</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+        <span class="nb">super</span><span class="p">(</span><span class="n">PlanList</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">form_valid</span><span class="p">(</span><span class="n">form</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="PlanList.form_invalid"><a class="viewcode-back" href="../../spreedly.html#spreedly.views.PlanList.form_invalid">[docs]</a>    <span class="k">def</span> <span class="nf">form_invalid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">form</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">render_to_response</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span>
+            <span class="n">object_list</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">object_list</span><span class="p">,</span> <span class="n">form</span><span class="o">=</span><span class="n">form</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="PlanList.post"><a class="viewcode-back" href="../../spreedly.html#spreedly.views.PlanList.post">[docs]</a>    <span class="k">def</span> <span class="nf">post</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="n">form_class</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_form_class</span><span class="p">()</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_form</span><span class="p">(</span><span class="n">form_class</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">form</span><span class="o">.</span><span class="n">is_valid</span><span class="p">():</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">form_valid</span><span class="p">(</span><span class="n">form</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">form_invalid</span><span class="p">(</span><span class="n">form</span><span class="p">)</span>
+
+</div></div>
+<div class="viewcode-block" id="plan_list"><a class="viewcode-back" href="../../spreedly.html#spreedly.views.plan_list">[docs]</a><span class="k">def</span> <span class="nf">plan_list</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">extra_context</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">sub</span> <span class="o">=</span> <span class="bp">None</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">is_authenticated</span><span class="p">():</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">sub</span> <span class="o">=</span> <span class="n">Subscription</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">user</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="p">)</span>
+        <span class="k">except</span> <span class="n">Subscription</span><span class="o">.</span><span class="n">DoesNotExist</span><span class="p">:</span>
+            <span class="k">pass</span>
+    
+    <span class="c"># cache the subscription list from spreedly for a day</span>
+    <span class="n">cache_key</span> <span class="o">=</span> <span class="s">&#39;spreedly_plans_list&#39;</span>
+    <span class="n">plans</span> <span class="o">=</span> <span class="n">cache</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">cache_key</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">plans</span><span class="p">:</span>
+        <span class="n">sync_plans</span><span class="p">()</span>
+        <span class="n">plans</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">Plan</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">enabled</span><span class="p">())</span>
+        <span class="n">cache</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">cache_key</span><span class="p">,</span> <span class="n">plans</span><span class="p">,</span> <span class="mi">60</span><span class="o">*</span><span class="mi">60</span><span class="o">*</span><span class="mi">24</span><span class="p">)</span>
+    
+    <span class="c"># deal with the form</span>
+    <span class="n">form</span> <span class="o">=</span> <span class="n">SubscribeForm</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span> <span class="ow">or</span> <span class="bp">None</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">form</span><span class="o">.</span><span class="n">is_valid</span><span class="p">():</span>
+        <span class="n">redirect_url</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">HttpResponseRedirect</span><span class="p">(</span><span class="n">redirect_url</span><span class="p">)</span>
+    
+    <span class="n">our_context</span><span class="o">=</span><span class="p">{</span>
+        <span class="s">&#39;current_user_subscription&#39;</span><span class="p">:</span> <span class="n">sub</span><span class="p">,</span>
+        <span class="s">&#39;site&#39;</span><span class="p">:</span> <span class="n">settings</span><span class="o">.</span><span class="n">SPREEDLY_SITE_NAME</span><span class="p">,</span>
+        <span class="s">&#39;login&#39;</span><span class="p">:</span> <span class="n">settings</span><span class="o">.</span><span class="n">LOGIN_URL</span><span class="p">,</span>
+        <span class="s">&#39;plans&#39;</span><span class="p">:</span> <span class="n">plans</span><span class="p">,</span>
+        <span class="s">&#39;request&#39;</span><span class="p">:</span> <span class="n">request</span><span class="p">,</span>
+        <span class="s">&#39;form&#39;</span><span class="p">:</span> <span class="n">form</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="n">extra_context</span><span class="p">:</span>
+        <span class="n">our_context</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">extra_context</span><span class="p">)</span>
+    <span class="n">context</span> <span class="o">=</span> <span class="n">RequestContext</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">our_context</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">context</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">callable</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="ow">and</span> <span class="n">value</span><span class="p">()</span> <span class="ow">or</span> <span class="n">value</span>
+    <span class="k">return</span> <span class="n">render_to_response</span><span class="p">(</span>
+        <span class="n">spreedly_settings</span><span class="o">.</span><span class="n">SPREEDLY_LIST_TEMPLATE</span><span class="p">,</span>
+        <span class="n">kwargs</span><span class="p">,</span>
+        <span class="n">context_instance</span><span class="o">=</span><span class="n">context</span>
+    <span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="AdminGift"><a class="viewcode-back" href="../../spreedly.html#spreedly.views.AdminGift">[docs]</a><span class="k">class</span> <span class="nc">AdminGift</span><span class="p">(</span><span class="n">FormView</span><span class="p">):</span>
+    <span class="n">form</span> <span class="o">=</span> <span class="n">AdminGiftForm</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s">&#39;spreedly/admin_gift.html&#39;</span>
+
+    <span class="nd">@method_decorator</span><span class="p">(</span><span class="n">staff_member_required</span><span class="p">)</span>
+<div class="viewcode-block" id="AdminGift.dispatch"><a class="viewcode-back" href="../../spreedly.html#spreedly.views.AdminGift.dispatch">[docs]</a>    <span class="k">def</span> <span class="nf">dispatch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">AdminGift</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">dispatch</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="AdminGift.form_valid"><a class="viewcode-back" href="../../spreedly.html#spreedly.views.AdminGift.form_valid">[docs]</a>    <span class="k">def</span> <span class="nf">form_valid</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">form</span><span class="p">):</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+
+        <span class="n">subscriber</span> <span class="o">=</span> <span class="n">Subscription</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get_or_create</span><span class="p">(</span><span class="n">user</span><span class="p">,</span>
+                <span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s">&#39;plan&#39;</span><span class="p">])</span>  <span class="c"># No data -&gt; get from client</span>
+        <span class="n">subscriber</span><span class="o">.</span><span class="n">create_complimentary_subscription</span><span class="p">(</span><span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s">&#39;time&#39;</span><span class="p">],</span>
+                <span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s">&#39;units&#39;</span><span class="p">],</span> <span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s">&#39;feature_level&#39;</span><span class="p">])</span>
+        <span class="n">user</span><span class="o">.</span><span class="n">gifts_received</span><span class="o">.</span><span class="n">latest</span><span class="p">(</span><span class="s">&#39;id&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">send_activation_email</span><span class="p">()</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">AdminGift</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">form_valid</span><span class="p">(</span><span class="n">form</span><span class="p">)</span>
+
+</div></div>
+<span class="nd">@staff_member_required</span>
+<div class="viewcode-block" id="admin_gift"><a class="viewcode-back" href="../../spreedly.html#spreedly.views.admin_gift">[docs]</a><span class="k">def</span> <span class="nf">admin_gift</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s">&#39;POST&#39;</span><span class="p">:</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="n">AdminGiftForm</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">form</span><span class="o">.</span><span class="n">is_valid</span><span class="p">():</span>
+            <span class="n">user</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+            
+            <span class="n">client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">SPREEDLY_AUTH_TOKEN</span><span class="p">,</span> <span class="n">settings</span><span class="o">.</span><span class="n">SPREEDLY_SITE_NAME</span><span class="p">)</span>
+            <span class="n">client</span><span class="o">.</span><span class="n">create_subscriber</span><span class="p">(</span><span class="n">user</span><span class="o">.</span><span class="n">pk</span><span class="p">,</span> <span class="n">user</span><span class="o">.</span><span class="n">email</span><span class="p">)</span>
+            <span class="n">client</span><span class="o">.</span><span class="n">create_complimentary_subscription</span><span class="p">(</span><span class="n">user</span><span class="o">.</span><span class="n">pk</span><span class="p">,</span> <span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s">&#39;time&#39;</span><span class="p">],</span> <span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s">&#39;units&#39;</span><span class="p">],</span> <span class="n">form</span><span class="o">.</span><span class="n">cleaned_data</span><span class="p">[</span><span class="s">&#39;feature_level&#39;</span><span class="p">])</span>
+            <span class="n">user</span><span class="o">.</span><span class="n">gifts_received</span><span class="o">.</span><span class="n">latest</span><span class="p">(</span><span class="s">&#39;id&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">send_activation_email</span><span class="p">()</span>
+            <span class="n">get_subscription</span><span class="p">(</span><span class="n">user</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="n">AdminGiftForm</span><span class="p">()</span>
+    
+    
+    <span class="k">return</span> <span class="n">render_to_response</span><span class="p">(</span>
+        <span class="n">spreedly_settings</span><span class="o">.</span><span class="n">SPREEDLY_ADMIN_GIFT_TEMPLATE</span><span class="p">,</span>
+        <span class="p">{</span><span class="s">&#39;form&#39;</span><span class="p">:</span> <span class="n">form</span><span class="p">},</span>
+        <span class="n">context_instance</span><span class="o">=</span><span class="n">RequestContext</span><span class="p">(</span><span class="n">request</span><span class="p">),</span>
+    <span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="gift_sign_up"><a class="viewcode-back" href="../../spreedly.html#spreedly.views.gift_sign_up">[docs]</a><span class="k">def</span> <span class="nf">gift_sign_up</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">gift_id</span><span class="p">,</span> <span class="n">extra_context</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">gift</span> <span class="o">=</span> <span class="n">Gift</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">uuid</span><span class="o">=</span><span class="n">gift_id</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">Gift</span><span class="o">.</span><span class="n">DoesNotExist</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">Http404</span><span class="p">(</span><span class="s">&#39;Requested gift is not valid&#39;</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s">&#39;POST&#39;</span><span class="p">:</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="n">GiftRegisterForm</span><span class="p">(</span><span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">form</span><span class="o">.</span><span class="n">is_valid</span><span class="p">():</span>
+            <span class="n">user</span> <span class="o">=</span> <span class="n">form</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+            
+            <span class="n">signals</span><span class="o">.</span><span class="n">gift_accepted</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">sender</span><span class="o">=</span><span class="n">user</span><span class="p">)</span>
+            
+            <span class="k">return</span> <span class="n">HttpResponseRedirect</span><span class="p">(</span><span class="s">&#39;/&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="n">GiftRegisterForm</span><span class="p">(</span><span class="n">initial</span><span class="o">=</span><span class="p">{</span>
+            <span class="s">&#39;gift_key&#39;</span><span class="p">:</span> <span class="n">gift_id</span>
+        <span class="p">})</span>
+
+    <span class="n">our_context</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">&#39;request&#39;</span><span class="p">:</span> <span class="n">request</span><span class="p">,</span>
+        <span class="s">&#39;form&#39;</span><span class="p">:</span> <span class="n">form</span><span class="p">,</span>
+    <span class="p">}</span>
+
+    <span class="k">if</span> <span class="n">extra_context</span><span class="p">:</span>
+        <span class="n">our_context</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">extra_context</span><span class="p">)</span>
+    <span class="n">context</span> <span class="o">=</span> <span class="n">RequestContext</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">our_context</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">context</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">callable</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="ow">and</span> <span class="n">value</span><span class="p">()</span> <span class="ow">or</span> <span class="n">value</span>
+    <span class="k">return</span> <span class="n">render_to_response</span><span class="p">(</span>
+        <span class="n">spreedly_settings</span><span class="o">.</span><span class="n">SPREEDLY_GIFT_REGISTER_TEMPLATE</span><span class="p">,</span>
+        <span class="n">kwargs</span><span class="p">,</span>
+        <span class="n">context_instance</span><span class="o">=</span><span class="n">context</span>
+    <span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="EmailSent"><a class="viewcode-back" href="../../views.html#spreedly.views.EmailSent">[docs]</a><span class="k">class</span> <span class="nc">EmailSent</span><span class="p">(</span><span class="n">TemplateView</span><span class="p">):</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s">&#39;spreedly/email_sent.html&#39;</span>
+
+<div class="viewcode-block" id="EmailSent.get_context_data"><a class="viewcode-back" href="../../spreedly.html#spreedly.views.EmailSent.get_context_data">[docs]</a>    <span class="k">def</span> <span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">context_data</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">EmailSent</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">context_data</span><span class="p">[</span><span class="s">&#39;user&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">User</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;user_id&#39;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">context_data</span>
+</div></div>
+<div class="viewcode-block" id="email_sent"><a class="viewcode-back" href="../../spreedly.html#spreedly.views.email_sent">[docs]</a><span class="k">def</span> <span class="nf">email_sent</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">user_id</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">user_id</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">User</span><span class="o">.</span><span class="n">DoesNotExist</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">Http404</span>
+    
+    <span class="k">return</span> <span class="n">render_to_response</span><span class="p">(</span>
+        <span class="n">spreedly_settings</span><span class="o">.</span><span class="n">SPREEDLY_EMAIL_SENT_TEMPLATE</span><span class="p">,</span> <span class="p">{</span>
+            <span class="s">&#39;request&#39;</span><span class="p">:</span> <span class="n">request</span><span class="p">,</span>
+            <span class="s">&#39;user&#39;</span><span class="p">:</span> <span class="n">user</span>
+        <span class="p">}</span>
+    <span class="p">)</span>
+
+</div>
+<div class="viewcode-block" id="SpreedlyReturn"><a class="viewcode-back" href="../../spreedly.html#spreedly.views.SpreedlyReturn">[docs]</a><span class="k">class</span> <span class="nc">SpreedlyReturn</span><span class="p">(</span><span class="n">TemplateView</span><span class="p">):</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s">&#39;spreedly/return.html&#39;</span>
+
+<div class="viewcode-block" id="SpreedlyReturn.get_context_data"><a class="viewcode-back" href="../../spreedly.html#spreedly.views.SpreedlyReturn.get_context_data">[docs]</a>    <span class="k">def</span> <span class="nf">get_context_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="c"># removed gift, request and login url</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">context_data</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">SpreedlyReturn</span><span class="p">,</span><span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">get_context_data</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">User</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;user_id&#39;</span><span class="p">])</span>
+        <span class="n">plan</span> <span class="o">=</span> <span class="n">get_object_or_404</span><span class="p">(</span><span class="n">Plan</span><span class="p">,</span> <span class="n">pk</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">kwargs</span><span class="p">[</span><span class="s">&#39;plan_pk&#39;</span><span class="p">])</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&#39;trial&#39;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">plan</span><span class="o">.</span><span class="n">trial_eligible</span><span class="p">(</span><span class="n">user</span><span class="p">):</span>
+                <span class="n">subscription</span> <span class="o">=</span> <span class="n">plan</span><span class="o">.</span><span class="n">start_trial</span><span class="p">(</span><span class="n">user</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">SuspiciousOperation</span><span class="p">(</span><span class="s">&quot;Trial asked for - but you are not eligibile for a free trial&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">subscription</span> <span class="o">=</span> <span class="n">Subscription</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get_or_create</span><span class="p">(</span><span class="n">user</span><span class="p">,</span> <span class="n">plan</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">context_data</span><span class="p">[</span><span class="s">&#39;subscription&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">subscription</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">context_data</span>
+</div></div>
+<div class="viewcode-block" id="spreedly_return"><a class="viewcode-back" href="../../spreedly.html#spreedly.views.spreedly_return">[docs]</a><span class="k">def</span> <span class="nf">spreedly_return</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">user_id</span><span class="p">,</span> <span class="n">plan_pk</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="n">extra_context</span><span class="o">=</span><span class="bp">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">user</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">user_id</span><span class="p">)</span>
+    <span class="k">except</span> <span class="n">User</span><span class="o">.</span><span class="n">DoesNotExist</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="n">Http404</span>
+    
+    <span class="k">if</span> <span class="n">plan_pk</span><span class="p">:</span>
+        <span class="n">plan</span> <span class="o">=</span> <span class="n">Plan</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="n">plan_pk</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">plan</span><span class="o">.</span><span class="n">plan_type</span> <span class="o">==</span> <span class="s">&#39;gift&#39;</span><span class="p">:</span>
+            <span class="n">Gift</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">to_user</span><span class="o">=</span><span class="n">user_id</span><span class="p">)</span><span class="o">.</span><span class="n">send_activation_email</span><span class="p">()</span>
+        
+        <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">GET</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&#39;trial&#39;</span><span class="p">):</span>
+            <span class="n">start_free_trial</span><span class="p">(</span><span class="n">plan</span><span class="p">,</span> <span class="n">user</span><span class="p">)</span>
+        
+    <span class="n">subscription</span> <span class="o">=</span> <span class="n">get_subscription</span><span class="p">(</span><span class="n">user</span><span class="p">)</span>
+    
+    <span class="n">our_context</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s">&#39;subscription&#39;</span><span class="p">:</span> <span class="n">subscription</span><span class="p">,</span>
+        <span class="s">&#39;request&#39;</span><span class="p">:</span> <span class="n">request</span><span class="p">,</span>
+        <span class="s">&#39;login_url&#39;</span><span class="p">:</span> <span class="n">settings</span><span class="o">.</span><span class="n">LOGIN_URL</span>
+    <span class="p">}</span>
+    <span class="k">if</span> <span class="n">extra_context</span><span class="p">:</span>
+        <span class="n">our_context</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">extra_context</span><span class="p">)</span>
+    <span class="n">context</span> <span class="o">=</span> <span class="n">RequestContext</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">our_context</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">context</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="nb">callable</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="ow">and</span> <span class="n">value</span><span class="p">()</span> <span class="ow">or</span> <span class="n">value</span>
+    <span class="k">return</span> <span class="n">render_to_response</span><span class="p">(</span>
+        <span class="n">spreedly_settings</span><span class="o">.</span><span class="n">SPREEDLY_RETURN_TEMPLATE</span><span class="p">,</span>
+        <span class="n">kwargs</span><span class="p">,</span>
+        <span class="n">context_instance</span><span class="o">=</span><span class="n">context</span>
+    <span class="p">)</span>
+</div>
+<span class="nd">@login_required</span>
+<div class="viewcode-block" id="my_subscription"><a class="viewcode-back" href="../../spreedly.html#spreedly.views.my_subscription">[docs]</a><span class="k">def</span> <span class="nf">my_subscription</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="n">plan</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">subscription</span><span class="o">.</span><span class="n">plan</span>
+    <span class="k">return</span> <span class="n">SpreedlyReturn</span><span class="o">.</span><span class="n">as_view</span><span class="p">(</span><span class="n">request</span><span class="p">,</span> <span class="n">user_id</span><span class="o">=</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">id</span><span class="p">,</span> <span class="n">plan_pk</span><span class="o">=</span><span class="n">plan</span><span class="p">)</span>
+
+</div>
+<span class="nd">@csrf_exempt</span>
+<div class="viewcode-block" id="spreedly_listener"><a class="viewcode-back" href="../../spreedly.html#spreedly.views.spreedly_listener">[docs]</a><span class="k">def</span> <span class="nf">spreedly_listener</span><span class="p">(</span><span class="n">request</span><span class="p">):</span>
+    <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">method</span> <span class="o">==</span> <span class="s">&#39;POST&#39;</span><span class="p">:</span>
+        <span class="c"># Try to extract customers&#39; IDs</span>
+        <span class="k">if</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="o">.</span><span class="n">has_key</span><span class="p">(</span><span class="s">&#39;subscriber_ids&#39;</span><span class="p">):</span>
+            <span class="n">subscriber_ids</span> <span class="o">=</span> <span class="n">request</span><span class="o">.</span><span class="n">POST</span><span class="p">[</span><span class="s">&#39;subscriber_ids&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">&#39;,&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">subscriber_ids</span><span class="p">):</span>
+                <span class="n">client</span> <span class="o">=</span> <span class="n">Client</span><span class="p">(</span><span class="n">settings</span><span class="o">.</span><span class="n">SPREEDLY_AUTH_TOKEN</span><span class="p">,</span> <span class="n">settings</span><span class="o">.</span><span class="n">SPREEDLY_SITE_NAME</span><span class="p">)</span>
+                <span class="k">for</span> <span class="nb">id</span> <span class="ow">in</span> <span class="n">subscriber_ids</span><span class="p">:</span>
+                    <span class="c"># Now let&#39;s query Spreedly API for the actual changes</span>
+                    <span class="n">data</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">get_info</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="nb">id</span><span class="p">))</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">user</span> <span class="o">=</span> <span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">pk</span><span class="o">=</span><span class="nb">id</span><span class="p">)</span>
+
+
+                        <span class="n">subscription</span><span class="p">,</span> <span class="n">created</span> <span class="o">=</span> <span class="n">Subscription</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get_or_create</span><span class="p">(</span><span class="n">user</span><span class="o">=</span><span class="n">user</span><span class="p">)</span>
+                            
+                        <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">subscription</span><span class="p">,</span> <span class="n">k</span><span class="p">):</span>
+                                <span class="nb">setattr</span><span class="p">(</span><span class="n">subscription</span><span class="p">,</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+                        <span class="n">subscription</span><span class="o">.</span><span class="n">save</span><span class="p">()</span>
+                        
+                        <span class="n">signals</span><span class="o">.</span><span class="n">subscription_update</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">sender</span><span class="o">=</span><span class="n">subscription</span><span class="p">,</span> <span class="n">user</span><span class="o">=</span><span class="n">User</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="nb">id</span><span class="p">))</span>
+                    <span class="k">except</span> <span class="n">User</span><span class="o">.</span><span class="n">DoesNotExist</span><span class="p">:</span>
+                        <span class="c"># TODO not sure what exactly to do here. Delete the subscripton on spreedly?</span>
+                        <span class="k">pass</span>
+                <span class="c">#handle gifts</span>
+                <span class="k">for</span> <span class="n">gift</span> <span class="ow">in</span> <span class="n">Gift</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">filter</span><span class="p">(</span><span class="n">to_user__pk__in</span><span class="o">=</span><span class="n">subscriber_ids</span><span class="p">):</span>
+                    <span class="n">gift</span><span class="o">.</span><span class="n">send_activation_email</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">HttpResponse</span><span class="p">()</span> <span class="c">#200 OK</span>
+
+</div>
+<div class="viewcode-block" id="SubscriptionDetails"><a class="viewcode-back" href="../../views.html#spreedly.views.SubscriptionDetails">[docs]</a><span class="k">class</span> <span class="nc">SubscriptionDetails</span><span class="p">(</span><span class="n">DetailView</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; .. py:class:Subscription</span>
+<span class="sd">    view to see subscription details.  takes subscription id as an optional</span>
+<span class="sd">    parameter.  if it is not there return the user&#39;s subscription if available,</span>
+<span class="sd">    if not 404.  if user.is_staff() - then you can see any Subscription details.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Subscription</span>
+    <span class="n">context_object_name</span> <span class="o">=</span> <span class="s">&#39;subscription&#39;</span>
+    <span class="n">template_name</span> <span class="o">=</span> <span class="s">&#39;spreedly/subscription_details.html&#39;</span>
+
+    <span class="nd">@method_decorator</span><span class="p">(</span><span class="n">login_required</span><span class="p">)</span>
+<div class="viewcode-block" id="SubscriptionDetails.dispatch"><a class="viewcode-back" href="../../spreedly.html#spreedly.views.SubscriptionDetails.dispatch">[docs]</a>    <span class="k">def</span> <span class="nf">dispatch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">super</span><span class="p">(</span><span class="n">SubscriptionDetails</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">dispatch</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="SubscriptionDetails.get_object"><a class="viewcode-back" href="../../views.html#spreedly.views.SubscriptionDetails.get_object">[docs]</a>    <span class="k">def</span> <span class="nf">get_object</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">queryset</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        if you are admin - any subscription can be shown, else, only that</span>
+<span class="sd">        which is associated with you</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">obj</span> <span class="o">=</span> <span class="nb">super</span><span class="p">(</span><span class="n">SubscriptionDetails</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">get_object</span><span class="p">(</span><span class="n">queryset</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+            <span class="c"># Called w/o id, so return my subscription or 404</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">subscription</span>
+            <span class="k">except</span> <span class="n">Subscription</span><span class="o">.</span><span class="n">DoesNotExist</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">Http404</span><span class="p">(</span><span class="n">_</span><span class="p">(</span><span class="s">u&quot;You have no subscriptions!&quot;</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">obj</span><span class="o">.</span><span class="n">user</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span> <span class="ow">and</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">user</span><span class="o">.</span><span class="n">is_staff</span><span class="p">():</span>
+            <span class="k">raise</span> <span class="n">SuspiciousOperation</span><span class="p">(</span><span class="n">_</span><span class="p">(</span><span class="s">u&quot;That isn&#39;t yours&quot;</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">obj</span>
+
+</div></div>
+<div class="viewcode-block" id="PlanDetails"><a class="viewcode-back" href="../../spreedly.html#spreedly.views.PlanDetails">[docs]</a><span class="k">class</span> <span class="nc">PlanDetails</span><span class="p">(</span><span class="n">DetailView</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Plan</span>
+    <span class="n">pk_url_kwarg</span> <span class="o">=</span> <span class="s">&#39;plan_pk&#39;</span>
+    <span class="n">slug_url_kwarg</span> <span class="o">=</span> <span class="s">&#39;plan_pk&#39;</span>
+
+</div>
+<div class="viewcode-block" id="EditSubscriber"><a class="viewcode-back" href="../../spreedly.html#spreedly.views.EditSubscriber">[docs]</a><span class="k">class</span> <span class="nc">EditSubscriber</span><span class="p">(</span><span class="n">UpdateView</span><span class="p">):</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Subscription</span>
+    <span class="n">form</span> <span class="o">=</span> <span class="n">SubscribeUpdateForm</span>
+
+<div class="viewcode-block" id="EditSubscriber.dispatch"><a class="viewcode-back" href="../../spreedly.html#spreedly.views.EditSubscriber.dispatch">[docs]</a>    <span class="k">def</span> <span class="nf">dispatch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">NotImplemented</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="../../index.html">django-spreedly 2.0 documentation</a> &raquo;</li>
+          <li><a href="../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2012, James Rivett-Carnac.
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.1.3.
+    </div>
+  </body>
+</html>

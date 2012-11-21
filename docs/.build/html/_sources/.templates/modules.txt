@@ -1,0 +1,7 @@
+spreedly
+========
+
+.. toctree::
+   :maxdepth: 4
+
+   spreedly

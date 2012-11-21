@@ -1,0 +1,11 @@
+templatetags Package
+====================
+
+:mod:`spreedly_tags` Module
+---------------------------
+
+.. automodule:: spreedly.templatetags.spreedly_tags
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
