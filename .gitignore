@@ -3,3 +3,12 @@
 nbproject
 settings_local.py
 .DS_Store
+
+# Vim files
+*.swp
+*.swo
+
+# setup stuff
+*.egg-info/*
+
+secret_conf.py

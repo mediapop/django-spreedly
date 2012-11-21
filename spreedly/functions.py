@@ -5,7 +5,7 @@ from django.core.mail import send_mail
 from django.template.loader import render_to_string
 
 from spreedly.models import Plan, Subscription
-from spreedly.pyspreedly.api import Client
+from pyspreedly.api import Client
 from spreedly import signals
 import spreedly.settings as spreedly_settings
 
@@ -13,6 +13,7 @@ def sync_plans():
     '''
     Sync subscription plans with Spreedly API
     '''
+    #TODO merge into plans manager
     client = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
     
     for plan in client.get_plans():
@@ -27,6 +28,7 @@ def sync_plans():
             p.save()
 
 def get_subscription(user):
+    #TODO move to subscription manager
     client = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
     data = client.get_info(user.id)
     
@@ -41,6 +43,7 @@ def get_subscription(user):
     return subscription
 
 def check_trial_eligibility(plan, user):
+    #TODO Move to plan model
     if plan.plan_type != 'free_trial':
         return False
     try:
@@ -51,6 +54,7 @@ def check_trial_eligibility(plan, user):
         return True
 
 def start_free_trial(plan, user):
+    #TODO move to plan model
     if check_trial_eligibility(plan, user):
         client = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
         client.get_or_create_subscriber(user.id, user.username)
@@ -61,12 +65,14 @@ def start_free_trial(plan, user):
         return False
 
 def return_url(plan_pk, user, trial=False):
+    #TODO move to plan model
     url = 'http://%s%s' % (spreedly_settings.SPREEDLY_SITE_URL, reverse('spreedly_return', args=[user.id, plan_pk]))
     if trial:
         url = url + '?trial=true'
     return url
 
 def subscription_url(plan, user):
+    #TODO move to plan model
     return 'https://spreedly.com/%(site_name)s/subscribers/%(user_id)s/subscribe/%(plan_id)s/%(user_email)s?email=%(user_email)s&return_url=%(return_url)s' % {
         'site_name': settings.SPREEDLY_SITE_NAME,
         'plan_id': plan.pk,

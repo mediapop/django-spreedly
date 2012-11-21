@@ -9,11 +9,11 @@ from django.core.urlresolvers import reverse
 from django.template.loader import render_to_string
 from django.utils.translation import ugettext_lazy as _
 
-from spreedly.models import Plan, Gift
+from spreedly.models import Plan, Gift, Subscription
 from spreedly.functions import subscription_url, check_trial_eligibility, return_url
 import spreedly.settings as spreedly_settings
 
-from spreedly.pyspreedly.api import Client
+from pyspreedly.api import Client
 
 class SubscribeForm(forms.Form):
     username = forms.CharField(
@@ -47,7 +47,7 @@ class SubscribeForm(forms.Form):
                 raise forms.ValidationError(_("You must type the same password each time."))
             
             if plan.is_free_trial_plan:
-                existing_users = Subscription.objects.filter(user__email=email, trial_elegible=False).count()
+                existing_users = Subscription.objects.filter(user__email=email, trial_eligible=False).count()
                 if existing_users:
                     raise forms.ValidationError(_("A user with this email has already had a free trial."))
             
@@ -87,6 +87,11 @@ class SubscribeForm(forms.Form):
             [user.email,]
         )
         return reverse('spreedly_email_sent', args=[user.id])
+
+class SubscribeUpdateForm(forms.ModelForm):
+    #TODO this needs to correctly update a form using pyspreedly.api.client
+    class Meta:
+        model = Subscription
 
 class GiftRegisterForm(forms.Form):
     username = forms.CharField(
@@ -203,10 +208,11 @@ class PlanModelChoiceField(forms.ModelChoiceField):
             return '*%s' % (obj)
         
 class AdminGiftForm(forms.Form):
-    plan_name = forms.CharField(
-        label="Plan Name",
+    plan = forms.ModelChoiceField(queryset=Plan.objects.enabled(),
+        label="Plan",
         required=True
     )
+    #TODO do something with this
     feature_level = forms.ChoiceField(
         label="Feature Level",
         choices=[(x,x) for x in set(Plan.objects.values_list('feature_level', flat=True))]
@@ -237,8 +243,13 @@ class AdminGiftForm(forms.Form):
         required=True
     )
 
+    def clean(self):
+        self.cleaned_data = super(AdminGiftForm, self).clean()
+        self.cleaned_data['gift_id'] = str(uuid.uuid4().hex)[:29]
+        return self.cleaned_data
+
     def save(self, request):
-        gift_id = str(uuid.uuid4().hex)[:29]
+        gift_id = self.cleaned_data['gift_id']
         
         user = User.objects.create(
             username=gift_id,
