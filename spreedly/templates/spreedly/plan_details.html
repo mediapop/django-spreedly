@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+{% load spreedly_tags %}
+{% load url from future %}
+<html>
+	<head>
+		<title>Plan Details</title>
+	</head>
+	<body>
+		<h1>Plan Details</h1>
+			<h3>Available plans:</h3>
+			<table>
+				<tr><th>Plan Type</th><th>Plan</th><th>Description</th><th>Terms</th><th>Price</th><th>Duration</th><th>Feature Level</th></tr>
+					<tr>
+            <th>{{ plan.plan_type }}</th>
+						<td>
+							{{ plan }}
+						</td>
+						<td>{{ plan.description }}</td>
+						<td>{{ plan.terms }}</td>
+						<td>${{ plan.price }}</td>
+						<td>{% if plan.duration %}{{ plan.duration }} {{ plan.duration_units}}{% else %}Forever!{% endif %}</td>
+						<td>{{ plan.feature_level }}</td>
+					</tr>
+			</table>
+
+		{% if not request.user.is_authenticated %}
+			<h3>Subscribe</h3>
+      {% else %}
+      <h3>Change Subscription</h3>
+		{% endif %}
+			<form action="." method="post">
+				{{ form.as_table }}
+				<p><input type="submit" value="Continue &rarr;"></p>
+			</form>
+	</body>
+</html>

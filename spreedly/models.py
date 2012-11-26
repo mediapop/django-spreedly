@@ -14,6 +14,9 @@ import spreedly.settings as spreedly_settings
 from django.conf import settings
 import warnings
 
+import logging
+logger = logging.getLogger(__name__)
+
 try:
     from django.utils.timezone import datetime
 except ImportError:
@@ -37,8 +40,8 @@ class PlanManager(models.Manager):
 
     def sync_plans(self):
         """
-            Gets a full list of plans from spreedly, and updates the local db
-            to match it
+        Gets a full list of plans from spreedly, and updates the local db
+        to match it
         """
         client = api.Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
 
@@ -65,8 +68,7 @@ PLAN_TYPES = (
 
 class Plan(models.Model):
     '''
-        Subscription plan
-
+    Subscription plan
     '''
     id = models.IntegerField(db_index=True, primary_key=True,
             verbose_name="Spreedly ID",
@@ -118,7 +120,7 @@ class Plan(models.Model):
             Is a customer/user eligibile for a trial?
             :param user: :py:class:`auth.User`
 
-            """
+        """
         try:
             subscription = user.subscription
             if subscription.plan == self and subscription.eligible_for_free_trial:
@@ -159,29 +161,120 @@ class Plan(models.Model):
         return self.plan_type == "free_trial"
 
     def get_return_url(self, user):
-        """
-            Get the return url for when they return from signing up for a
-            :py:class:`Plan`.
-            :param user: :py:class:`auth.User` to get the
-
-            """
         site = Site.objects.get(pk=settings.SITE_ID)
         base_url = 'https://{site.domain}/'.format(site=site)
         url = urljoin(base_url, reverse('spreedly_return', args=[user.id, self.id]))
         return url
 
     def subscription_url(self,user):
-        """
-            get the url for the subscription details
-            :param user: :py:class:`auth.User` to get this for
-
-            """
         try:
             token = user.subscription.token
         except (AttributeError, Subscription.DoesotExist):
             token = None
         return self._client.get_signup_url(subscriber_id=user.id,plan_id=self.id,
             screen_name=user.username, token=token)
+
+
+class FeeGroup(models.Model):
+    name = models.CharField(max_length=100, primary_key=True)
+
+
+class Fee(models.Model):
+    """ .. py:class::Fee
+    A Fee for a given Plan.
+
+    :attr plan: ForeignKey(Plan)
+    :attr name: CharField(max_length=100)
+    :attr group: ForeignKey(FeeGroup)
+    :attr default_amount: DecimalField(default=0)
+    """
+    plan = models.ForeignKey(Plan)
+    name = models.CharField(max_length=100)
+    group = models.ForeignKey(FeeGroup)
+    default_amount= models.DecimalField(max_digits=6, decimal_places=2, default='0',
+        help_text=u'USD')
+
+    def add_fee(self, user, description, amount=None):
+        """ .. py:method::add_fee(user, description[, amount])
+
+        add a fee to the given user, with description and amount.  if amount
+        is not passed, then it will use `default_amount` if it is greater than
+        0.
+
+        if 404 or 422 are returned, the default action is not to save the
+        line item to the db, this can be overriden with the setting
+        SPREEDLY_SAVE_ON_FAIL, but it is not recomended as who knows what will
+        happen.
+
+        :param user: the user to bill for the fee.  they must be subscribed to `self.plan`
+        :param description: The description of the fee to appear on the invoice
+        :param amount: The amount to bill or `None`
+        :raises: py:class:`ValueError` if the user is not subscribed to the plan or is subscribed to a different plan.
+        :raises: py:class:`Http404` if spreedly can't find the plan, user, etc.
+        :raises: py:class:`HttpUnprocessableEntity` if spreedly raised 422 for some reason.
+        """
+        if not amount:
+            amount = self.default_amount
+        if amount <= 0:
+            raise ValueError("Amount must be greater than 0")
+        try:
+            if user.subscription.plan != self.plan:
+                raise ValueError("This fee is not for the user's plan")
+        except Subscription.DoesNotExist:
+                raise ValueError("This user is not signed up to a plan")
+        line_item = LineItem(
+                fee=self,
+                user=user,
+                amount=amount,
+                description=description)
+        response = self.plan._client.add_fee(user.id, self.name,
+                description, self.group.name, amount)
+        response_code = response.status_code
+        if response_code == 404:
+            logger.error('fee failed to process due to not found: {fee}, {user}'
+                         ', {description}, {amount}. response: {response}'.format(
+                             fee=self, user=user, description=description,
+                             amount=amount, response=response))
+            raise Http404()
+        elif response_code == 422:
+            logger.error('fee failed to process due to unprocesable: {fee}, {user}'
+                         ', {description}, {amount}. response: {response}'.format(
+                             fee=self, user=user, description=description,
+                             amount=amount, response=response))
+            raise HttpUnprocessableEntity()
+        try:
+            if response_code == 201:
+                line_item.successfull = True
+                line_item.save()
+            elif spreedly_settings.SPREEDLY_SAVE_ON_FAIL:
+                # This is probably a terrible idea
+                line_item.successfull = False
+                return line_item.save()
+        except Exception as e:
+            logger.critical(
+                    'line_item failed to save: {fee}, {user}'
+                    ', {description}, {amount}. response: {response} '
+                    'line_item: {line_item}, error: {e}'.format(
+                            fee=self, user=user, description=description,
+                            amount=amount, response=response,
+                            line_item=line_item, e=e))
+            e.response = response
+            raise e
+
+
+
+class LineItem(models.Model):
+    """This is an instance of a fee"""
+    fee = models.ForeignKey(Fee)
+    user = models.ForeignKey('auth.User')
+    amount= models.DecimalField(max_digits=6, decimal_places=2, default='0',
+        help_text=u'USD')
+    issued_at = models.DateTimeField(auto_now_add=True)
+    started = models.BooleanField(default=False)
+    successfull = models.BooleanField(default=False)
+    description = models.TextField()
+    reference = models.CharField(max_length=100, null=True)
+    error_code = models.TextField(null=True)
 
 
 class SubscriptionManager(models.Manager):
@@ -203,7 +296,7 @@ class SubscriptionManager(models.Manager):
             for k in data:
                 try:
                     if data[k] is not None:
-                        if subscription.get(k) != data[k]:
+                        if getattr(subscription, k) != data[k]:
                             setattr(subscription,k,data[k])
                 except AttributeError:
                     pass
@@ -255,7 +348,7 @@ class Subscription(models.Model):
             self.user.is_active = True
             self.user.save()
         self.url = urljoin(self._client.base_url,'subscriber_accounts/{token}'.format(token=self.token))
-        super(Subscription, self).save(*args, **kwargs)
+        return super(Subscription, self).save(*args, **kwargs)
 
     @property
     def ending_this_month(self):
@@ -300,6 +393,21 @@ class Subscription(models.Model):
         self.save()
         return self
 
+    def update_subscription(self, data):
+        """update a subscription with supplied data"""
+        #TODO calculate surchargs/credits caused by changes.
+        plan = Plan.objects.get(pk=data['subscription_plan_version']['id'])
+        for k in data:
+            try:
+                if data[k] is not None:
+                    if getattr(self, k) != data[k]:
+                        setattr(self,k,data[k])
+            except AttributeError:
+                pass
+        self.plan = plan
+        self.save()
+
+
     def create_complimentary_subscription(self, time, unit, feature_level):
         """
             :raises: :py:exc:`NotImplementedError` cause it isn't implemented
@@ -318,12 +426,7 @@ class Subscription(models.Model):
             :raises: Http404 if incorrect subscriber, HttpUnprocessableEntity for any other 422 error
 
         """
-        response = self._client.add_fee(self.user.id,name,description,group,
-                amount)
-        if response == 404:
-            raise Http404()
-        elif response == 422:
-            raise HttpUnprocessableEntity()
+        fee.add_fee(self.user, description, amount)
 
 
 class Gift(models.Model):

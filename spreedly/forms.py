@@ -88,6 +88,8 @@ class SubscribeForm(forms.Form):
         )
         return reverse('spreedly_email_sent', args=[user.id])
 
+
+
 class SubscribeUpdateForm(forms.ModelForm):
     #TODO this needs to correctly update a form using pyspreedly.api.client
     class Meta:

@@ -54,19 +54,19 @@ if __name__ == "__main__":
     schemamigration = parser.add_argument_group('migrate')
     schemamigration.add_argument('--schemamigration', action='store_true', 
             default=False, help="preform a schema migration")
-    schema_migrate_opts = schemamigration.add_mutually_exclusive_group(required=False)
+    schema_migrate_opts = schemamigration.add_argument_group()
     schema_migrate_opts.add_argument('--auto',action='store_true')
     schema_migrate_opts.add_argument('--empty',action='store_true')
     schema_migrate_opts.add_argument('--update',action='store_true')
     args = parser.parse_args()
     if args.test:
         run_tests()
-    if args.schemamigration:
+    elif args.schemamigration:
         conf()
         syncdb()
         migrate()
         schema_migrate(auto=args.auto,empty=args.empty,update=args.update)
-    if args.datamigration:
+    elif args.datamigration:
         conf()
         syncdb()
         migrate()
@@ -76,3 +76,8 @@ if __name__ == "__main__":
         syncdb()
         migrate()
         sql()
+    else:
+        conf()
+        syncdb()
+        migrate()
+        call_command("shell")

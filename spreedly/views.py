@@ -8,11 +8,13 @@ from django.contrib.auth.models import User
 from django.template import RequestContext
 from django.core.cache import cache
 from django.conf import settings
+from django import forms
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.contrib.admin.views.decorators import staff_member_required
 from django.views.decorators.csrf import csrf_exempt
-from django.views.generic import ListView, TemplateView, View, FormView, DetailView, UpdateView
+from django.views.generic import (ListView, TemplateView, View, FormView,
+        DetailView, UpdateView)
 from django.views.generic.edit import FormMixin
 from django.core.urlresolvers import reverse
 
@@ -23,61 +25,15 @@ import spreedly.settings as spreedly_settings
 from spreedly.forms import SubscribeForm, GiftRegisterForm, AdminGiftForm, SubscribeUpdateForm
 from spreedly import signals
 
-class PlanList(ListView, FormMixin):
+class SubscribeMixin(FormMixin):
     """
-    inherits from :py:class:`ListView` and :py:class:`FormMixin`, hybrid list and
-    subscription entry view.
-    default template name is `spreedly_plan_list.html`,
-    object_list name is `plans`
-    cache's plans for 24 hours
+    inherits from FormMixin, handles, get_success_url, form valid, invalid and
+    post.  Needs to be integerated into get context data and get_success_url
     """
-    template_name = "spreedly/plan_list.html"
-    model = Plan
-    context_object_name = 'plans'
     form_class = SubscribeForm
-
-    def get_context_data(self, object_list, **kwargs):
-        """
-            Adds form and object list plus whatever else is passed as a kwarg
-            to the context.
-            :param object_list: list of :py:class:`Plan`s (actually queryset)
-            """
-        context = ListView.get_context_data(self, object_list=object_list)
-        context.update(FormMixin.get_context_data(self, **kwargs))
-        if self.request.user.is_authenticated():
-            context['current_user_subscription'] = getattr(self.request.user, 'subscription', None)
-        else:
-            context['current_user_subscription'] = None
-        return context
-
-    def get_queryset(self):
-        """
-            Gets and caches the plan list for 1 day
-        """
-        cache_key = 'spreedly_plans_list'
-        plans = cache.get(cache_key)
-        if not plans:
-            Plan.objects.sync_plans()
-            plans = Plan.objects.enabled()
-            cache.set(cache_key, plans, 60*60*24)
-        return plans
 
     def get_success_url(self):
         return reverse('spreedly_email_sent', args=[self.request.user_id])
-
-    def get(self, *args, **kwargs):
-        """
-            Gets the form and object list and returns a rendered template
-        """
-        form_class = self.get_form_class()
-        form = self.get_form(form_class)
-        self.object_list = self.get_queryset()
-        allow_empty = self.get_allow_empty()
-        if not allow_empty and len(self.object_list) == 0:
-            raise Http404(_(u"Empty list and '%(class_name)s.allow_empty' is False.")
-                          % {'class_name': self.__class__.__name__})
-        context = self.get_context_data(object_list=self.object_list, form=form, **kwargs)
-        return self.render_to_response(context)
 
     def form_valid(self, form):
         form.save()
@@ -96,6 +52,59 @@ class PlanList(ListView, FormMixin):
             return self.form_invalid(form)
 
 
+class PlanList(ListView, SubscribeMixin):
+    """
+    inherits from :py:cls:`ListView` and :py:cls:`FormMixin`, hybrid list and
+    subscription entry view.
+    default template name is `spreedly_plan_list.html`,
+    object_list name is `plans`
+    cache's plans for 24 hours
+    """
+    template_name = "spreedly/plan_list.html"
+    model = Plan
+    context_object_name = 'plans'
+
+    def get_context_data(self, object_list, **kwargs):
+        """
+            Adds form and object list plus whatever else is passed as a kwarg
+            to the context.
+            :param object_list: list of :py:class:`Plan`s (actually queryset)
+            """
+        context = ListView.get_context_data(self, object_list=object_list)
+        context.update(SubscribeMixin.get_context_data(self, **kwargs))
+        if self.request.user.is_authenticated():
+            context['current_user_subscription'] = getattr(self.request.user, 'subscription', None)
+        else:
+            context['current_user_subscription'] = None
+        return context
+
+    def get_queryset(self):
+        """
+            Gets and caches the plan list for 1 day
+        """
+        cache_key = 'spreedly_plans_list'
+        plans = cache.get(cache_key)
+        if not plans:
+            Plan.objects.sync_plans()
+            plans = Plan.objects.enabled()
+            cache.set(cache_key, plans, 60*60*24)
+        return plans
+
+    def get(self, *args, **kwargs):
+        """
+            Gets the form and object list and returns a rendered template
+        """
+        form_class = self.get_form_class()
+        form = self.get_form(form_class)
+        self.object_list = self.get_queryset()
+        allow_empty = self.get_allow_empty()
+        if not allow_empty and len(self.object_list) == 0:
+            raise Http404(_(u"Empty list and '%(class_name)s.allow_empty' is False.")
+                          % {'class_name': self.__class__.__name__})
+        context = self.get_context_data(object_list=self.object_list, form=form, **kwargs)
+        return self.render_to_response(context)
+
+
 class EmailSent(TemplateView):
     """
         A thankyou page for after registration saying an email has been sent
@@ -106,6 +115,19 @@ class EmailSent(TemplateView):
         self.context_data = super(EmailSent, self).get_context_data(*args, **kwargs)
         self.context_data['user'] = get_object_or_404(User, pk=self.kwargs['user_id'])
         return self.context_data
+
+def email_sent(request, user_id):
+    try:
+        user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        raise Http404
+
+    return render_to_response(
+        spreedly_settings.SPREEDLY_EMAIL_SENT_TEMPLATE, {
+            'request': request,
+            'user': user
+        }
+    )
 
 
 class SpreedlyReturn(TemplateView):
@@ -143,12 +165,12 @@ def spreedly_listener(request):
 
 
                         subscription, created = Subscription.objects.get_or_create(user=user)
-                            
+
                         for k, v in data.items():
                             if hasattr(subscription, k):
                                 setattr(subscription, k, v)
                         subscription.save()
-                        
+
                         signals.subscription_update.send(sender=subscription, user=User.objects.get(id=id))
                     except User.DoesNotExist:
                         # TODO not sure what exactly to do here. Delete the subscripton on spreedly?
@@ -191,10 +213,31 @@ class SubscriptionDetails(DetailView):
         return obj
 
 
-class PlanDetails(DetailView):
+class PlanDetails(DetailView, SubscribeMixin):
     model = Plan
     pk_url_kwarg = 'plan_pk'
     slug_url_kwarg = 'plan_pk'
+    context_object_name = 'plan'
+    template_name = 'spreedly/plan_details.html'
+
+    def get_context_data(self, **kwargs):
+        context = DetailView.get_context_data(self, **kwargs)
+        if self.request.user.is_authenticated():
+            context['current_user_subscription'] = getattr(self.request.user, 'subscription', None)
+        else:
+            context['current_user_subscription'] = None
+        return context
+
+    def get(self, *args, **kwargs):
+        self.object = self.get_object()
+        kwargs['object'] = self.object
+        form_class = self.get_form_class()
+        form = self.get_form(form_class)
+        form.fields['subscription'].widget = forms.HiddenInput()
+        form.fields['subscription'].initial = self.object
+        kwargs['form'] = form
+        context = self.get_context_data(**kwargs)
+        return self.render_to_response(context)
 
 
 class EditSubscriber(UpdateView):
@@ -202,4 +245,4 @@ class EditSubscriber(UpdateView):
     form = SubscribeUpdateForm
 
     def dispatch(self, *args, **kwargs):
-        return NotImplemented
+        raise NotImplementedError
