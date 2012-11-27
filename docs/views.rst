@@ -1,5 +1,5 @@
-spreedly Package
-================
+Views
+=====
 
 
 :mod:`views` Module

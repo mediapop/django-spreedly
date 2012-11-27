@@ -1,5 +1,5 @@
-spreedly Package
-================
+Models
+======
 
 
 :mod:`models` Module

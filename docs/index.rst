@@ -9,10 +9,10 @@ Welcome to django-spreedly's documentation!
 Contents:
 
 .. toctree::
-   :maxdepth: 4
+    :maxdepth: 2
 
-    views
-    models
+    conf
+    modules
 
 Indices and tables
 ==================
