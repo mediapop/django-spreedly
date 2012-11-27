@@ -211,9 +211,9 @@ class Fee(models.Model):
         :param user: the user to bill for the fee.  they must be subscribed to `self.plan`
         :param description: The description of the fee to appear on the invoice
         :param amount: The amount to bill or `None`
-        :raises: py:class:`ValueError` if the user is not subscribed to the plan or is subscribed to a different plan.
-        :raises: py:class:`Http404` if spreedly can't find the plan, user, etc.
-        :raises: py:class:`HttpUnprocessableEntity` if spreedly raised 422 for some reason.
+        :raises: :py:exc:`ValueError` if the user is not subscribed to the plan or is subscribed to a different plan.
+        :raises: :py:exc:`Http404` if spreedly can't find the plan, user, etc.
+        :raises: :py:exc:`HttpUnprocessableEntity` if spreedly raised 422 for some reason.
         """
         if not amount:
             amount = self.default_amount
