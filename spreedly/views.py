@@ -54,7 +54,7 @@ class SubscribeMixin(FormMixin):
 
 class PlanList(ListView, SubscribeMixin):
     """
-    inherits from :py:cls:`ListView` and :py:cls:`FormMixin`, hybrid list and
+    inherits from :py:class:`ListView` and :py:class:`FormMixin`, hybrid list and
     subscription entry view.
     default template name is `spreedly_plan_list.html`,
     object_list name is `plans`

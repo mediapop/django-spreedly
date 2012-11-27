@@ -6,12 +6,6 @@ SPREEDLY_RETURN_URL = getattr(settings, 'SPREEDLY_RETURN_URL', '/thanks/')
 # The base URL for all spreedly related pages
 SPREEDLY_URL = getattr(settings, 'SPREEDLY_URL', '/subscriptions/')
 
-# The template that should be used for subscription listing and signup
-SPREEDLY_LIST_TEMPLATE = getattr(settings, 'SPREEDLY_LIST_TEMPLATE', 'subscriptions.html')
-
-# The template that should be used to show a user returning to your site from spreedly their new subscription status
-SPREEDLY_RETURN_TEMPLATE = getattr(settings, 'SPREEDLY_RETURN_TEMPLATE', 'thanks.html')
-
 # lock out your entire site (except for spreedly URLs and the paths below) to non-subscribed users?
 SPREEDLY_USERS_ONLY = getattr(settings, 'SPREEDLY_USERS_ONLY', False)
 

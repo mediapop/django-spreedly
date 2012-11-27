@@ -65,18 +65,76 @@
 </div>
 <div class="section" id="settings">
 <h2>Settings<a class="headerlink" href="#settings" title="Permalink to this headline">¶</a></h2>
-<p>In your settings file, add spreedly to <cite>INSTALLED_APPS</cite>:</p>
+<ol class="arabic">
+<li><p class="first">In your settings file, add spreedly to <cite>INSTALLED_APPS</cite>:</p>
 <div class="highlight-python"><pre>INSTALLED_APPS = (
     ...
     'spreedly',
     ...
     )</pre>
 </div>
-<p>Add your auth token and site name as well:</p>
+</li>
+<li><p class="first">Add your auth token and site name as well:</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="n">SPREEDLY_AUTH_TOKEN</span> <span class="o">=</span> <span class="s">&#39;super-secret-token&#39;</span>
 <span class="n">SPREEDLY_SITE_NAME</span> <span class="o">=</span> <span class="s">&#39;site-name&#39;</span>
 </pre></div>
 </div>
+</li>
+<li><p class="first">The following can also be added, they are optional, and are in the process of being reviewed/removed:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="c"># this string will be used as the url for returning users from spreedly.</span>
+<span class="c"># this defaults to &#39;/thanks/&#39;</span>
+<span class="n">SPREEDLY_RETURN_URL</span> <span class="o">=</span> <span class="s">&#39;/welcome/&#39;</span>
+
+<span class="c"># the base subscription url (where users will be redirected when their subscriptions expire)</span>
+<span class="c"># this defaults to &#39;/subscriptions/&#39; if you don&#39;t add a value to your settings.</span>
+<span class="n">SPREEDLY_URL</span> <span class="o">=</span><span class="s">&#39;/register/&#39;</span>
+
+<span class="c"># if you want to restrict access to your entire site based to only users with an active subscription</span>
+<span class="c"># this defaults to False</span>
+<span class="n">SPREEDLY_USERS_ONLY</span> <span class="o">=</span> <span class="bp">True</span>
+
+<span class="c"># URL paths that a user without a subscription can vist without being redirected to the subscription list:</span>
+<span class="c"># these can be single pages (&#39;/some/page/&#39;) of full directories (&#39;/directory&#39;)</span>
+<span class="n">SPREEDLY_ALLOWED_PATHS</span> <span class="o">=</span> <span class="p">[</span><span class="s">&#39;/login&#39;</span><span class="p">,</span> <span class="s">&#39;/logout&#39;</span><span class="p">]</span>
+
+<span class="c"># This template will be used when checking to make sure the user is using a valid email</span>
+<span class="c"># this default to &#39;confirm_email.txt&#39; Be sure to include {{ spreedly_url }} in your template</span>
+<span class="n">SPREEDLY_CONFIRM_EMAIL</span> <span class="o">=</span> <span class="s">&#39;path/to/your/template.txt&#39;</span>
+
+<span class="c"># This subject will be used for confirmation emails</span>
+<span class="c"># this defaults to &quot;&#39;complete your subscription to %s&#39; % Site.object.get(id=settings.SITE_ID).name&quot;</span>
+<span class="n">SPREEDLY_CONFIRM_EMAIL_SUBJECT</span> <span class="o">=</span> <span class="s">&#39;This is a new subject&#39;</span>
+
+<span class="c"># Where a user is directed after signing up.</span>
+<span class="c"># this defaults to &#39;email_sent.html&#39;</span>
+<span class="n">SPREEDLY_EMAIL_SENT_TEMPLATE</span> <span class="o">=</span> <span class="s">&#39;path/to/your/template.html&#39;</span>
+
+<span class="c"># this is the email that will be sent to the user recieving the gift subscription</span>
+<span class="c"># this default to &#39;gift_email.txt&#39; Be sure to include {{ spreedly_url }} in your template</span>
+<span class="n">SPREEDLY_GIFT_EMAIL</span> <span class="o">=</span> <span class="s">&#39;path/to/your/template.txt&#39;</span>
+
+<span class="c"># the subject for the gift confirm email</span>
+<span class="c"># this defaults to &#39;gift subscription to %s&#39; % Site.objects.get(id=settings.SITE_ID).name</span>
+<span class="n">SPREEDLY_GIFT_EMAIL_SUBJECT</span> <span class="o">=</span> <span class="s">&#39;This is a new subject&#39;</span>
+
+<span class="c"># the base url for your site to be used when returning users from spreedly.</span>
+<span class="c"># this default to Site.objects.get(id=settings.SITE_ID) from the django Site app.</span>
+<span class="n">SPREEDLY_SITE_URL</span> <span class="o">=</span> <span class="s">&#39;something.com&#39;</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Add the middleware to your <cite>settings.py</cite> MIDDLEWARE_CLASSES.  This will be turned into a decorator in a later version:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="s">&#39;spreedly.middleware.SpreedlyMiddleware&#39;</span>
+</pre></div>
+</div>
+</li>
+<li><p class="first">Add the following to urlpatterns in <cite>urls.py</cite>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">import</span> <span class="nn">spreedly.settings</span> <span class="kn">as</span> <span class="nn">spreedly_settings</span>
+<span class="p">(</span><span class="s">r&#39;^spreedly&#39;</span><span class="p">,</span> <span class="n">include</span><span class="p">(</span><span class="s">&#39;spreedly.urls&#39;</span><span class="p">)),</span>
+</pre></div>
+</div>
+</li>
+</ol>
 </div>
 <div class="section" id="syncdb">
 <h2>Syncdb<a class="headerlink" href="#syncdb" title="Permalink to this headline">¶</a></h2>

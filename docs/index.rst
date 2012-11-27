@@ -6,6 +6,10 @@
 Welcome to django-spreedly's documentation!
 ===========================================
 
+These are a first run on documents, They are mostly built from doc strings,
+which are generally accurate.  The more meta level stuff - conf and use - are
+slightly out of date - you are warned.
+
 Contents:
 
 .. toctree::
@@ -13,6 +17,7 @@ Contents:
 
     conf
     modules
+    use
 
 Indices and tables
 ==================

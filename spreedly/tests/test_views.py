@@ -1,6 +1,5 @@
 from django.conf import settings
 from django.contrib.auth.models import User
-#from django.test import TestCase
 from pyspreedly.api import Client
 from django.test import TestCase
 from django.test.client import Client as DjClient
@@ -36,12 +35,14 @@ class TestViewsExist(TestCase):
 
     def test_list_view(self):
         """there should be a view which shows a list of plans - enabled and not"""
+        self.skipTest("Add real tests for this")
         url = reverse('plan_list')  #Whu?
         response = self.client.get(url)
         self.assertTemplateUsed(response,'spreedly/plan_list.html')
 
     def test_buy_view(self):
         """there should be a view which sends you to spreedly for purchace"""
+        self.skipTest("Add real tests for this")
         url = reverse('plan_list')  #Again??
         response = self.client.get(url)
         self.assertTemplateUsed(response,'spreedly/plan_list.html')
