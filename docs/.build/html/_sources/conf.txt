@@ -23,7 +23,7 @@ Settings
     SPREEDLY_AUTH_TOKEN = 'super-secret-token'
     SPREEDLY_SITE_NAME = 'site-name'
 
-3) The following can also be added, they are optional, and are in the process of being reviewed/removed::
+3) The following are in the process of being reviewed for being removal.  They can also be added, they are optiona::
 
 	# this string will be used as the url for returning users from spreedly.
 	# this defaults to '/thanks/'
