@@ -23,7 +23,7 @@ from django.core.management import call_command
 from tests.site_conf import DICT_CONF
 
 settings.configure(**DICT_CONF)
-call_command("syncdb")
+call_command("syncdb",interactive=False)
 call_command("migrate", "spreedly")
 
 # If extensions (or modules to document with autodoc) are in another directory,
