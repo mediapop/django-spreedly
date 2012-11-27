@@ -104,6 +104,8 @@ class Plan(models.Model):
     class NotEligibile(Exception):
         pass
 
+    def get_absolute_url(self):
+        return reverse('plan_details',kwargs={'plan_pk':self.id})
 
     class Meta:
         ordering = ['name']
@@ -349,6 +351,9 @@ class Subscription(models.Model):
             self.user.save()
         self.url = urljoin(self._client.base_url,'subscriber_accounts/{token}'.format(token=self.token))
         return super(Subscription, self).save(*args, **kwargs)
+
+    def get_absolute_url(self):
+        return self.url
 
     @property
     def ending_this_month(self):
