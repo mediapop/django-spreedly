@@ -1,0 +1,2 @@
+SPREEDLY_AUTH_TOKEN = 'asdf'
+SPREEDLY_SITE_NAME = 'jamesrc-test'
