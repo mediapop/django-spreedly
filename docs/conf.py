@@ -13,14 +13,16 @@
 
 import os
 import sys
-
 from argparse import ArgumentParser
 from path import path
+sys.path.append(path(__file__).abspath().dirname().dirname())
+
 
 from django.conf import settings
 from django.core.management import call_command
 
 from tests.site_conf import DICT_CONF
+
 
 settings.configure(**DICT_CONF)
 call_command("syncdb",interactive=False)
