@@ -20,7 +20,7 @@ setup(
     packages=find_packages(exclude=("tests",)),
     zip_safe=False,
     install_requires=[
-        'python-spreedly==2.0'
+        'pyspreedly==2.0'
     ],
     test_suite='tests.run_tasks.run_tests',
     include_package_data=True,
