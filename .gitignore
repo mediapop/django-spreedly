@@ -12,3 +12,5 @@ settings_local.py
 *.egg-info/*
 
 secret_conf.py
+
+django_spreedly.egg-info/*
