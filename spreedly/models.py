@@ -420,17 +420,17 @@ class Subscription(models.Model):
         """
         raise NotImplementedError()
 
-    def add_fee(self, name, description, group, amount):
+    def add_fee(self, fee, units, description):
         """
             Add a fee to the subscription
-            :param name: the name of the fee (eg - Excess Bandwidth Charge)
+            :param fee: :py:class:`Fee` to add to the linked user
+            :param units: the number of units the charge is for (100kb, 4 nights, etc.)
             :param description: a description of the charge
-            :param group: a group to add this charge too
-            :param amount: the amount the charge is for
             :returns: None
             :raises: Http404 if incorrect subscriber, HttpUnprocessableEntity for any other 422 error
 
         """
+        amount = fee.default_amount * units
         fee.add_fee(self.user, description, amount)
 
 

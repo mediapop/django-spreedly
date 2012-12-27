@@ -7,6 +7,7 @@ from spreedly.functions import sync_plans
 from spreedly.models import HttpUnprocessableEntity
 from spreedly.models import Plan, Fee, FeeGroup, LineItem, Subscription
 from datetime import datetime, timedelta
+import requests
 from mock import patch
 import ipdb
 
@@ -34,8 +35,8 @@ class TestPlan(TestCase):
     def setUpClass(self):
         self.sclient = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
         Plan.objects.sync_plans()
-        self.plan = Plan.objects.get(pk=21431)  # make sure this is trial-enabled
-        self.plan2 = Plan.objects.get(pk=21430)  # and that this one is not
+        self.plan = Plan.objects.get(pk=21327)  # make sure this is trial-enabled
+        self.plan2 = Plan.objects.get(pk=22215)  # and that this one is not
 
     def setUp(self):
         self.user = User.objects.create(username='test')
@@ -61,7 +62,7 @@ class TestPlan(TestCase):
 
     def test_get_return_url(self):
         url = self.plan.get_return_url(self.user)
-        self.assertEquals(url, 'https://www.testsite.com/return/1/21431/')
+        self.assertEquals(url, 'https://www.testsite.com/return/1/21327/')
 
 class TestSubscriptions(TestCase):
     fixtures = ['sites',]
@@ -71,7 +72,7 @@ class TestSubscriptions(TestCase):
 
     def setUp(self):
         self.sclient = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
-        self.plan = Plan.objects.get(pk=21431)
+        self.plan = Plan.objects.get(pk=21327)
         self.user = User.objects.create(username='test')
         self.client_data = self.sclient.create_subscriber(self.user.id,'test')
         self.subscription = self.plan.start_trial(self.user)
@@ -150,7 +151,7 @@ class TestAddFee(TestCase):
 
     def setUp(self):
         self.sclient = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
-        self.plan = Plan.objects.get(pk=21431)
+        self.plan = Plan.objects.get(pk=22215)
         self.user = User.objects.create(username='test')
         self.client_data = self.sclient.create_subscriber(self.user.id,'test')
         self.fee_group = FeeGroup.objects.create(name="Test feegroup 1")
