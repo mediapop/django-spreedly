@@ -100,13 +100,13 @@ happen.</p>
 </ul>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Raises :</th><td class="field-body"><p class="first">py:class:<cite>ValueError</cite> if the user is not subscribed to the plan or is subscribed to a different plan.</p>
+<tr class="field-even field"><th class="field-name">Raises :</th><td class="field-body"><p class="first"><tt class="xref py py-exc docutils literal"><span class="pre">ValueError</span></tt> if the user is not subscribed to the plan or is subscribed to a different plan.</p>
 </td>
 </tr>
-<tr class="field-odd field"><th class="field-name">Raises :</th><td class="field-body"><p class="first">py:class:<cite>Http404</cite> if spreedly can&#8217;t find the plan, user, etc.</p>
+<tr class="field-odd field"><th class="field-name">Raises :</th><td class="field-body"><p class="first"><tt class="xref py py-exc docutils literal"><span class="pre">Http404</span></tt> if spreedly can&#8217;t find the plan, user, etc.</p>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Raises :</th><td class="field-body"><p class="first last">py:class:<cite>HttpUnprocessableEntity</cite> if spreedly raised 422 for some reason.</p>
+<tr class="field-even field"><th class="field-name">Raises :</th><td class="field-body"><p class="first last"><tt class="xref py py-exc docutils literal"><span class="pre">HttpUnprocessableEntity</span></tt> if spreedly raised 422 for some reason.</p>
 </td>
 </tr>
 </tbody>
@@ -199,12 +199,11 @@ subscription to a plan.  Since a user can only have one subscription,
 this is sometimes treated as a user profile class.</p>
 <dl class="method">
 <dt id="spreedly.models.Subscription.add_fee">
-<tt class="descname">add_fee</tt><big>(</big><em>name</em>, <em>description</em>, <em>group</em>, <em>amount</em><big>)</big><a class="reference internal" href="_modules/spreedly/models.html#Subscription.add_fee"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spreedly.models.Subscription.add_fee" title="Permalink to this definition">¶</a></dt>
+<tt class="descname">add_fee</tt><big>(</big><em>fee</em>, <em>units</em>, <em>description</em><big>)</big><a class="reference internal" href="_modules/spreedly/models.html#Subscription.add_fee"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#spreedly.models.Subscription.add_fee" title="Permalink to this definition">¶</a></dt>
 <dd><p>Add a fee to the subscription
-:param name: the name of the fee (eg - Excess Bandwidth Charge)
+:param fee: <a class="reference internal" href="#spreedly.models.Fee" title="spreedly.models.Fee"><tt class="xref py py-class docutils literal"><span class="pre">Fee</span></tt></a> to add to the linked user
+:param units: the number of units the charge is for (100kb, 4 nights, etc.)
 :param description: a description of the charge
-:param group: a group to add this charge too
-:param amount: the amount the charge is for
 :returns: None
 :raises: Http404 if incorrect subscriber, HttpUnprocessableEntity for any other 422 error</p>
 </dd></dl>
