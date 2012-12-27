@@ -311,11 +311,11 @@ class SubscriptionManager(models.Manager):
 
 class Subscription(models.Model):
     """
-        Class that manages the details for a specific :py:class:`auth.User`'s
-        subscription to a plan.  Since a user can only have one subscription,
-        this is sometimes treated as a user profile class.
+    Class that manages the details for a specific :py:class:`auth.User`'s
+    subscription to a plan.  Since a user can only have one subscription,
+    this is sometimes treated as a user profile class.
 
-        """
+    """
     name = models.CharField(max_length=100, blank=True)
 
     user = models.OneToOneField('auth.User', primary_key=True)
@@ -358,34 +358,31 @@ class Subscription(models.Model):
     @property
     def ending_this_month(self):
         """
-            Will this plan end within the next 30 days
-
-            """
+        Will this plan end within the next 30 days
+        """
         return datetime.today() <= self.active_until <= datetime.today() + timedelta(days=30)
 
     @property
     def subscription_active(self):
         '''
-            gets the status based on current active status and active_until
-
-            '''
+        gets the status based on current active status and active_until
+        '''
         if self.active and (self.active_until > datetime.today() or self.active_until == None):
             return True
         return False
 
     def subscription_url(self, user):
         '''
-            :raises: :py:exc:`NotImplementedError`
-
-            '''
+        :raises: :py:exc:`NotImplementedError`
+        '''
         raise NotImplementedError()
 
     def allow_free_trial(self):
         """
-            Allow a free Trial
-            :returns: :py:class:`Subscription`
-            :raises: :py:class:`Exception` (of some kind) if bad juju
+        Allow a free Trial
 
+        :returns: :py:class:`Subscription`
+        :raises: :py:class:`Exception` (of some kind) if bad juju
         """
         response  = self._client.allow_free_trial(self.user.id)
         for k in response:
@@ -415,19 +412,19 @@ class Subscription(models.Model):
 
     def create_complimentary_subscription(self, time, unit, feature_level):
         """
-            :raises: :py:exc:`NotImplementedError` cause it isn't implemented
-
+        :raises: :py:exc:`NotImplementedError` cause it isn't implemented
         """
         raise NotImplementedError()
 
     def add_fee(self, fee, units, description):
         """
-            Add a fee to the subscription
-            :param fee: :py:class:`Fee` to add to the linked user
-            :param units: the number of units the charge is for (100kb, 4 nights, etc.)
-            :param description: a description of the charge
-            :returns: None
-            :raises: Http404 if incorrect subscriber, HttpUnprocessableEntity for any other 422 error
+        Add a fee to the subscription
+
+        :param fee: :py:class:`Fee` to add to the linked user
+        :param units: the number of units the charge is for (100kb, 4 nights, etc.)
+        :param description: a description of the charge
+        :returns: None
+        :raises: Http404 if incorrect subscriber, HttpUnprocessableEntity for any other 422 error
 
         """
         amount = fee.default_amount * units
@@ -436,8 +433,8 @@ class Subscription(models.Model):
 
 class Gift(models.Model):
     """
-        Not tested or really implemented in version 2
-        """
+    Not tested or really implemented in version 2
+    """
     uuid = models.CharField(max_length=32, unique=True, db_index=True)
 
     from_user = models.ForeignKey(User, related_name='gifts_sent')
