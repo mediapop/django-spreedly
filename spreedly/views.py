@@ -19,7 +19,6 @@ from django.views.generic.edit import FormMixin
 from django.core.urlresolvers import reverse
 
 from pyspreedly.api import Client
-from spreedly.functions import sync_plans, get_subscription, start_free_trial
 from spreedly.models import Plan, Subscription, Gift
 import spreedly.settings as spreedly_settings
 from spreedly.forms import SubscribeForm, GiftRegisterForm, AdminGiftForm, SubscribeUpdateForm
