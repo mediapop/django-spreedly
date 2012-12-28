@@ -10,7 +10,6 @@ from django.template.loader import render_to_string
 from django.utils.translation import ugettext_lazy as _
 
 from spreedly.models import Plan, Gift, Subscription
-from spreedly.functions import subscription_url, check_trial_eligibility, return_url
 import spreedly.settings as spreedly_settings
 
 from pyspreedly.api import Client
@@ -34,47 +33,47 @@ class SubscribeForm(forms.Form):
         widget=forms.PasswordInput(),
     )
     subscription = forms.ModelChoiceField(queryset=Plan.objects.filter(enabled=True), empty_label=None)
-    
+
     def clean(self):
         username =  self.cleaned_data.get("username")
         email =     self.cleaned_data.get("email")
         pass1 =     self.cleaned_data.get("password1")
         pass2 =     self.cleaned_data.get("password2")
         plan =      self.cleaned_data.get("subscription")
-        
+
         if username and email and pass1 and pass2:
             if pass1 != pass2:
                 raise forms.ValidationError(_("You must type the same password each time."))
-            
+
             if plan.is_free_trial_plan:
                 existing_users = Subscription.objects.filter(user__email=email, trial_eligible=False).count()
                 if existing_users:
                     raise forms.ValidationError(_("A user with this email has already had a free trial."))
-            
+
             user, created = User.objects.get_or_create(username=username.lower(), defaults={
                 'email': email,
                 'is_active': False
             })
-            
+
             if not created and user.is_active:
                 raise forms.ValidationError(_("Sorry, This username is already taken."))
             elif not created:
                 user.email = email
                 user.save()
         return self.cleaned_data
-    
+
     def save(self):
         user = User.objects.get(username=self.cleaned_data["username"].lower())
         user.set_password(self.cleaned_data["password2"])
         user.save()
         plan = self.cleaned_data["subscription"]
-        
+
         trial = check_trial_eligibility(plan, user)
         if trial:
             url = return_url(plan.pk, user, trial=True)
         else:
             url = subscription_url(plan, user)
-        
+
         send_mail(
             spreedly_settings.SPREEDLY_CONFIRM_EMAIL_SUBJECT,
             render_to_string(spreedly_settings.SPREEDLY_CONFIRM_EMAIL, {
@@ -114,14 +113,14 @@ class GiftRegisterForm(forms.Form):
         widget=forms.PasswordInput(),
     )
     gift_key = forms.CharField(max_length=32, required=True, widget=forms.HiddenInput)
-    
+
     def clean(self):
         username =  self.cleaned_data.get("username")
         email =     self.cleaned_data.get("email")
         pass1 =     self.cleaned_data.get("password1")
         pass2 =     self.cleaned_data.get("password2")
         gift_key =  self.cleaned_data.get("gift_key")
-        
+
         if username:
             try:
                 User.objects.get(username=self.cleaned_data['username'], is_active=True)
@@ -132,7 +131,7 @@ class GiftRegisterForm(forms.Form):
             if pass1 != pass2:
                 raise forms.ValidationError(_("You must type the same password each time."))
         return self.cleaned_data
-    
+
     def save(self):
         # remove any inactive users with this same username
         try:
@@ -172,27 +171,27 @@ class GiftForm(forms.Form):
         label="Email Again",
         required=True
     )
-    
+
     def clean(self):
         email =     self.cleaned_data.get("email")
         email2 =    self.cleaned_data.get("email_again")
-        
+
         if email and email2:
             if email != email2:
                 raise forms.ValidationError(_("The two emails don't match. Please make sure both are correct."))
         return self.cleaned_data
-    
+
     def save(self, request):
         gift_id = str(uuid.uuid4().hex)[:29]
         plan = self.cleaned_data["subscription"]
-        
+
         user = User.objects.create(
             username=gift_id,
             email=self.cleaned_data["email"],
             is_active=False,
             password='GIFT'
         )
-        
+
         Gift.objects.create(
             from_user=request.user,
             to_user=user,
@@ -208,7 +207,7 @@ class PlanModelChoiceField(forms.ModelChoiceField):
             return unicode(obj)
         else:
             return '*%s' % (obj)
-        
+
 class AdminGiftForm(forms.Form):
     plan = forms.ModelChoiceField(queryset=Plan.objects.enabled(),
         label="Plan",
@@ -252,14 +251,14 @@ class AdminGiftForm(forms.Form):
 
     def save(self, request):
         gift_id = self.cleaned_data['gift_id']
-        
+
         user = User.objects.create(
             username=gift_id,
             email=self.cleaned_data["email"],
             is_active=False,
             password='GIFT'
         )
-        
+
         Gift.objects.create(
             from_user=request.user,
             to_user=user,
