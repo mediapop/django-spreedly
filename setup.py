@@ -11,7 +11,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='django-spreedly',
-    version='2.0.4',
+    version='2.0.5',
     author='James Rivett-Carnac',
     author_email='dev@mediapop.co',
     url='www.github.com/mediapop/django-spreedly',
@@ -20,7 +20,7 @@ setup(
     packages=find_packages(exclude=("tests",)),
     zip_safe=False,
     install_requires=[
-        'pyspreedly==2.0'
+        'pyspreedly==2.0.1',
     ],
     test_suite='tests.run_tasks.run_tests',
     include_package_data=True,
