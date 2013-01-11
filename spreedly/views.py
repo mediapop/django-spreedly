@@ -137,13 +137,15 @@ class SpreedlyReturn(TemplateView):
         self.context_data = super(SpreedlyReturn,self).get_context_data(*args, **kwargs)
         user = get_object_or_404(User, pk=self.kwargs['user_id'])
         plan = get_object_or_404(Plan, pk=self.kwargs['plan_pk'])
-        if self.request.GET.has_key('trial'):
+        if self.request.GET.has_key('trial') or plan.plan_type == 'free_trial':
             if plan.trial_eligible(user):
                 subscription = plan.start_trial(user)
             else:
                 raise SuspiciousOperation("Trial asked for - but you are not eligibile for a free trial")
         else:
             subscription = Subscription.objects.get_or_create(user, plan)
+        if self.request.GET.has_key('next'):
+            self.context_data['next'] = self.request.GET['next']
         self.context_data['subscription'] = subscription
         return self.context_data
 

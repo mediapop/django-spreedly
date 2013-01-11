@@ -13,6 +13,7 @@ from urlparse import urljoin
 import spreedly.settings as spreedly_settings
 from django.conf import settings
 import warnings
+from requests import HTTPError
 
 import logging
 logger = logging.getLogger(__name__)
@@ -171,7 +172,7 @@ class Plan(models.Model):
     def subscription_url(self,user):
         try:
             token = user.subscription.token
-        except (AttributeError, Subscription.DoesotExist):
+        except (AttributeError, Subscription.DoesNotExist):
             token = None
         subscription_url = self._client.get_signup_url(subscriber_id=user.id,plan_id=self.id,
             screen_name=user.username, token=token)
@@ -302,7 +303,7 @@ class SubscriptionManager(models.Manager):
             for k in data:
                 try:
                     if data[k] is not None:
-                        if getattr(subscription, k) != data[k]:
+                        if getattr(subscription, k, None) != data[k]:
                             setattr(subscription,k,data[k])
                 except AttributeError:
                     pass
