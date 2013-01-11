@@ -173,8 +173,12 @@ class Plan(models.Model):
             token = user.subscription.token
         except (AttributeError, Subscription.DoesotExist):
             token = None
-        return self._client.get_signup_url(subscriber_id=user.id,plan_id=self.id,
+        subscription_url = self._client.get_signup_url(subscriber_id=user.id,plan_id=self.id,
             screen_name=user.username, token=token)
+        return_url = self.get_return_url(user)
+        return "{subscription_url)?return_url={return_url}".format(
+                subscription_url=subscription_url,
+                return_url=return_url)
 
 
 class FeeGroup(models.Model):
@@ -373,12 +377,6 @@ class Subscription(models.Model):
         if self.active and (self.active_until > datetime.today() or self.active_until == None):
             return True
         return False
-
-    def subscription_url(self, user):
-        '''
-        :raises: :py:exc:`NotImplementedError`
-        '''
-        raise NotImplementedError()
 
     def allow_free_trial(self):
         """
