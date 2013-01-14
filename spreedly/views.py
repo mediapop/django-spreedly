@@ -36,7 +36,7 @@ class SubscribeMixin(FormMixin):
 
     def form_valid(self, form):
         form.save()
-        super(PlanList, self).form_valid(form)
+        super(SubscribeMixin, self).form_valid(form)
 
     def form_invalid(self, form):
         self.render_to_response(self.get_context_data(
@@ -72,9 +72,10 @@ class PlanList(ListView, SubscribeMixin):
         context = ListView.get_context_data(self, object_list=object_list)
         context.update(SubscribeMixin.get_context_data(self, **kwargs))
         if self.request.user.is_authenticated():
-            context['current_user_subscription'] = getattr(self.request.user, 'subscription', None)
-        else:
-            context['current_user_subscription'] = None
+            try:
+                context['current_user_subscription'] = self.request.user.subscription
+            except Subscription.DoesNotExist:
+                context['current_user_subscription'] = None
         return context
 
     def get_queryset(self):
