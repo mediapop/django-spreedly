@@ -133,11 +133,7 @@ def email_sent(request, user_id):
 class SpreedlyReturn(TemplateView):
     template_name = 'spreedly/return.html'
 
-    def get_context_data(self, *args, **kwargs):
-        # removed gift, request and login url
-        self.context_data = super(SpreedlyReturn,self).get_context_data(*args, **kwargs)
-        user = get_object_or_404(User, pk=self.kwargs['user_id'])
-        plan = get_object_or_404(Plan, pk=self.kwargs['plan_pk'])
+    def create_subscription(self, user, plan):
         if self.request.GET.has_key('trial') or plan.plan_type == 'free_trial':
             if plan.trial_eligible(user):
                 subscription = plan.start_trial(user)
@@ -145,10 +141,23 @@ class SpreedlyReturn(TemplateView):
                 raise SuspiciousOperation("Trial asked for - but you are not eligibile for a free trial")
         else:
             subscription = Subscription.objects.get_or_create(user, plan)
+        return subscription
+
+    def get_context_data(self, plan, subscription, *args, **kwargs):
+        # removed gift, request and login url
+        self.context_data = super(SpreedlyReturn,self).get_context_data(*args, **kwargs)
+        self.context_data['plan'] = plan
         if self.request.GET.has_key('next'):
             self.context_data['next'] = self.request.GET['next']
         self.context_data['subscription'] = subscription
         return self.context_data
+
+    def get(self,request, *args, **kwargs):
+        user = get_object_or_404(User, pk=self.kwargs['user_id'])
+        plan = get_object_or_404(Plan, pk=self.kwargs['plan_pk'])
+        subscription = self.create_subscription(user, plan)
+        context_data = self.get_context_data(plan, subscription, **kwargs)
+        return self.render_to_response(context_data)
 
 
 @csrf_exempt
