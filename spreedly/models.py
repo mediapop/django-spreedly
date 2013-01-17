@@ -187,6 +187,9 @@ class Plan(models.Model):
 class FeeGroup(models.Model):
     name = models.CharField(max_length=100, primary_key=True)
 
+    def __unicode__(self):
+        return unicode(self.name)
+
 
 class Fee(models.Model):
     """ .. py:class::Fee
@@ -202,6 +205,9 @@ class Fee(models.Model):
     group = models.ForeignKey(FeeGroup)
     default_amount= models.DecimalField(max_digits=6, decimal_places=2, default='0',
         help_text=u'USD')
+
+    def __unicode__(self):
+        return u"{self.plan.name}: {self.name}".format(self=self)
 
     def add_fee(self, user, description, amount=None):
         """ .. py:method::add_fee(user, description[, amount])
