@@ -307,7 +307,10 @@ class SubscriptionManager(models.Manager):
         except Subscription.DoesNotExist:
             subscription = Subscription()
             if not data:  # new client, no plan.
-                data = subscription._client.create_subscriber(user.id, user.username)
+                try:
+                    data = subscription._client.get_info(user.id)
+                except HTTPError:
+                    data = subscription._client.create_subscriber(user.id, user.username)
             for k in data:
                 try:
                     if data[k] is not None:
@@ -343,7 +346,7 @@ class Subscription(models.Model):
     recurring = models.BooleanField(default=False)
     active = models.BooleanField(default=False)
 
-    plan = models.ForeignKey(Plan, null=True, default=None)
+    plan = models.ForeignKey(Plan, null=True, default=None, on_delete=models.PROTECT)
 
     url = models.URLField(editable=False)
 
