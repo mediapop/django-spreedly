@@ -24,7 +24,7 @@ import spreedly.settings as spreedly_settings
 from spreedly.forms import SubscribeForm, GiftRegisterForm, AdminGiftForm, SubscribeUpdateForm
 from spreedly import signals
 
-class SubscribeMixin(FormMixin):
+class SubscribeMixin(object):
     """
     inherits from FormMixin, handles, get_success_url, form valid, invalid and
     post.  Needs to be integerated into get context data and get_success_url
@@ -51,7 +51,7 @@ class SubscribeMixin(FormMixin):
             return self.form_invalid(form)
 
 
-class PlanList(ListView, SubscribeMixin):
+class PlanList(SubscribeMixin, ListView):
     """
     inherits from :py:class:`ListView` and :py:class:`FormMixin`, hybrid list and
     subscription entry view.
@@ -114,19 +114,6 @@ class EmailSent(TemplateView):
         self.context_data = super(EmailSent, self).get_context_data(*args, **kwargs)
         self.context_data['user'] = get_object_or_404(User, pk=self.kwargs['user_id'])
         return self.context_data
-
-def email_sent(request, user_id):
-    try:
-        user = User.objects.get(id=user_id)
-    except User.DoesNotExist:
-        raise Http404
-
-    return render_to_response(
-        spreedly_settings.SPREEDLY_EMAIL_SENT_TEMPLATE, {
-            'request': request,
-            'user': user
-        }
-    )
 
 
 class SpreedlyReturn(TemplateView):
