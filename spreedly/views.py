@@ -127,7 +127,7 @@ class SpreedlyReturn(TemplateView):
             else:
                 raise SuspiciousOperation("Trial asked for - but you are not eligibile for a free trial")
         else:
-            subscription = Subscription.objects.get_or_create(user, plan)
+            subscription = Subscription.objects.create_local(user, plan)
         return subscription
 
     def get_context_data(self, plan, subscription, *args, **kwargs):

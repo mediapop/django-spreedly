@@ -1,21 +1,23 @@
+import warnings
+import logging
+
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.contrib.sites.models import Site
 from django.core.mail import send_mail
 from django.core.urlresolvers import reverse
 from django.db import models
-from django.db.models import Q
 from django.http import Http404
 from django.template.loader import render_to_string
 from django.utils.translation import ugettext as _
-from pyspreedly import api
-from urlparse import urljoin
-import spreedly.settings as spreedly_settings
-from django.conf import settings
-import warnings
-from requests import HTTPError
+from django.core.exceptions import IntegrityError
 
-import logging
+from . import api
+import spreedly.settings as spreedly_settings
+
+from requests import HTTPError
+from urlparse import urljoin
+
 logger = logging.getLogger(__name__)
 
 try:
@@ -25,7 +27,7 @@ except ImportError:
 from datetime import timedelta
 
 
-class HttpUnprocessableEntity(Exception):
+class HttpUnprocessableEntity(HTTPError):
     pass
 
 
@@ -44,7 +46,8 @@ class PlanManager(models.Manager):
         Gets a full list of plans from spreedly, and updates the local db
         to match it
         """
-        client = api.Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
+        client = api.Client(settings.SPREEDLY_AUTH_TOKEN,
+                settings.SPREEDLY_SITE_NAME)
 
         for plan in client.get_plans():
             plan = plan['subscription_plan']
@@ -75,10 +78,12 @@ class Plan(models.Model):
             verbose_name="Spreedly ID",
             help_text="Spreedly plan ID")
     name = models.CharField(max_length=64, null=True)
-    description = models.TextField(null=True,blank=True)
+    description = models.TextField(null=True, blank=True)
     terms = models.CharField(max_length=100, blank=True)
 
-    plan_type = models.CharField(max_length=10, choices=PLAN_TYPES,blank=True)
+    plan_type = models.CharField(max_length=10,
+            choices=PLAN_TYPES,
+            blank=True)
     price = models.DecimalField(max_digits=6, decimal_places=2, default='0',
         help_text=u'USD', null=True)
 
@@ -106,13 +111,14 @@ class Plan(models.Model):
         pass
 
     def get_absolute_url(self):
-        return reverse('plan_details',kwargs={'plan_pk':self.id})
+        return reverse('plan_details', kwargs={'plan_pk': self.id})
 
     class Meta:
         ordering = ['name']
 
     def __init__(self, *args, **kwargs):
-        self._client = api.Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
+        self._client = api.Client(settings.SPREEDLY_AUTH_TOKEN,
+                settings.SPREEDLY_SITE_NAME)
         super(Plan, self).__init__(*args, **kwargs)
 
     def __unicode__(self):
@@ -126,10 +132,8 @@ class Plan(models.Model):
         """
         try:
             subscription = user.subscription
-            if subscription.plan == self and subscription.eligible_for_free_trial:
-                return True
-            else:
-                return False
+            return (subscription.plan == self and
+                    subscription.eligible_for_free_trial)
         except Subscription.DoesNotExist:
             return self.is_free_trial_plan
 
@@ -151,9 +155,9 @@ class Plan(models.Model):
 
     @property
     def plan_type_display(self):
-        warnings.warn("Deprecated due to switiching to choices",DeprecationWarning)
-        return self.plan_type.replace('_',' ').title()
-
+        warnings.warn("Deprecated due to switiching to choices",
+                DeprecationWarning)
+        return self.plan_type.replace('_', ' ').title()
 
     @property
     def is_gift_plan(self):
@@ -166,9 +170,10 @@ class Plan(models.Model):
     def get_return_url(self, user, namespace=None):
         site = Site.objects.get(pk=settings.SITE_ID)
         base_url = 'https://{site.domain}/'.format(site=site)
-        reverse_urlname = "{0}:spreedly_return".format(namespace) if namespace else 'spreedly_return'
+        reverse_urlname = "{0}:spreedly_return".format(namespace) if \
+                          namespace else 'spreedly_return'
         url = urljoin(base_url, reverse(reverse_urlname, kwargs={
-            'user_id':user.id, 'plan_pk': self.id}))
+            'user_id': user.id, 'plan_pk': self.id}))
         return url
 
     def subscription_url(self, user, namespace=None):
@@ -176,8 +181,11 @@ class Plan(models.Model):
             token = user.subscription.token
         except (AttributeError, Subscription.DoesNotExist):
             token = None
-        subscription_url = self._client.get_signup_url(subscriber_id=user.id,plan_id=self.id,
-            screen_name=user.username, token=token)
+        subscription_url = self._client.get_signup_url(
+                subscriber_id=user.id,
+                plan_id=self.id,
+                screen_name=user.username,
+                token=token)
         return_url = self.get_return_url(user, namespace)
         return "{subscription_url}?return_url={return_url}".format(
                 subscription_url=subscription_url,
@@ -203,7 +211,9 @@ class Fee(models.Model):
     plan = models.ForeignKey(Plan)
     name = models.CharField(max_length=100)
     group = models.ForeignKey(FeeGroup)
-    default_amount= models.DecimalField(max_digits=6, decimal_places=2, default='0',
+    default_amount = models.DecimalField(max_digits=6,
+            decimal_places=2,
+            default='0',
         help_text=u'USD')
 
     def __unicode__(self):
@@ -245,15 +255,16 @@ class Fee(models.Model):
         response = self.plan._client.add_fee(user.id, self.name,
                 description, self.group.name, amount)
         response_code = response.status_code
+        msg_template = 'fee failed to process due to {reason}: {fee}, ' \
+                       '{user}, {description}, {amount}.  response: ' \
+                       '{response}'
         if response_code == 404:
-            logger.error('fee failed to process due to not found: {fee}, {user}'
-                         ', {description}, {amount}. response: {response}'.format(
+            logger.error(msg_template.format(reason="not found",
                              fee=self, user=user, description=description,
                              amount=amount, response=response))
             raise Http404()
         elif response_code == 422:
-            logger.error('fee failed to process due to unprocesable: {fee}, {user}'
-                         ', {description}, {amount}. response: {response}'.format(
+            logger.error(msg_template.format(reason="unprocesable",
                              fee=self, user=user, description=description,
                              amount=amount, response=response))
             raise HttpUnprocessableEntity()
@@ -277,12 +288,11 @@ class Fee(models.Model):
             raise e
 
 
-
 class LineItem(models.Model):
     """This is an instance of a fee"""
     fee = models.ForeignKey(Fee)
     user = models.ForeignKey('auth.User')
-    amount= models.DecimalField(max_digits=6, decimal_places=2, default='0',
+    amount = models.DecimalField(max_digits=6, decimal_places=2, default='0',
         help_text=u'USD')
     issued_at = models.DateTimeField(auto_now_add=True)
     started = models.BooleanField(default=False)
@@ -293,6 +303,37 @@ class LineItem(models.Model):
 
 
 class SubscriptionManager(models.Manager):
+    def create_local(self, user, plan=None):
+        """
+            Get a subscriber from spreedly and create the local model for it
+            :param user: py:class:`auth.User`
+            :param plan: py:class:`Plan`
+            :returns: py:class:`Subscription`
+
+        """
+        try:
+            subscription = self.get_query_set().get(user=user, plan=plan)
+            raise IntegrityError("Subscriber already exists")
+        except Subscription.DoesNotExist:
+            subscription = Subscription()
+            try:
+                data = subscription._client.get_info(user.id)
+            except HTTPError:
+                logger.exception("Coudln't get subscriber from spreedly")
+                raise
+            for k in data:
+                try:
+                    if data[k] is not None:
+                        if getattr(subscription, k, None) != data[k]:
+                            setattr(subscription, k, data[k])
+                except AttributeError:
+                    pass
+        subscription.user = user
+        subscription.plan = plan
+        subscription.active = getattr(subscription, 'active', bool(plan))
+        subscription.save()
+        return subscription
+
     def get_or_create(self, user, plan=None, data=None):
         """
             get or create a subscription based on a user, plan and data passed
@@ -303,19 +344,20 @@ class SubscriptionManager(models.Manager):
 
         """
         try:
-            subscription = self.get(user=user,plan=plan)
+            subscription = self.get_query_set().get(user=user, plan=plan)
         except Subscription.DoesNotExist:
             subscription = Subscription()
             if not data:  # new client, no plan.
                 try:
                     data = subscription._client.get_info(user.id)
                 except HTTPError:
-                    data = subscription._client.create_subscriber(user.id, user.username)
+                    data = subscription._client.create_subscriber(user.id,
+                            user.username)
             for k in data:
                 try:
                     if data[k] is not None:
                         if getattr(subscription, k, None) != data[k]:
-                            setattr(subscription,k,data[k])
+                            setattr(subscription, k, data[k])
                 except AttributeError:
                     pass
         subscription.user = user
@@ -346,20 +388,26 @@ class Subscription(models.Model):
     recurring = models.BooleanField(default=False)
     active = models.BooleanField(default=False)
 
-    plan = models.ForeignKey(Plan, null=True, default=None, on_delete=models.PROTECT)
+    plan = models.ForeignKey(Plan,
+            null=True,
+            default=None,
+            on_delete=models.PROTECT)
 
     url = models.URLField(editable=False)
 
     card_expires_before_next_auto_renew = models.BooleanField(default=False)
 
-    store_credit = models.DecimalField(max_digits=6, decimal_places=2, default='0',
-        help_text=u'USD')
+    store_credit = models.DecimalField(max_digits=6,
+            decimal_places=2,
+            default='0',
+            help_text=u'USD')
 
     objects = SubscriptionManager()
 
     def __init__(self, *args, **kwargs):
-        self._client = api.Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
-        super(Subscription,self).__init__(*args, **kwargs)
+        self._client = api.Client(settings.SPREEDLY_AUTH_TOKEN,
+                settings.SPREEDLY_SITE_NAME)
+        super(Subscription, self).__init__(*args, **kwargs)
 
     def __unicode__(self):
         return u'Subscription for %s' % self.user
@@ -368,7 +416,8 @@ class Subscription(models.Model):
         if self.active and not self.user.is_active:
             self.user.is_active = True
             self.user.save()
-        self.url = urljoin(self._client.base_url,'subscriber_accounts/{token}'.format(token=self.token))
+        self.url = urljoin(self._client.base_url,
+                'subscriber_accounts/{token}'.format(token=self.token))
         return super(Subscription, self).save(*args, **kwargs)
 
     def get_absolute_url(self):
@@ -379,16 +428,16 @@ class Subscription(models.Model):
         """
         Will this plan end within the next 30 days
         """
-        return datetime.today() <= self.active_until <= datetime.today() + timedelta(days=30)
+        return (datetime.today() <= self.active_until <=
+                datetime.today() + timedelta(days=30))
 
     @property
     def subscription_active(self):
         '''
         gets the status based on current active status and active_until
         '''
-        if self.active and (self.active_until > datetime.today() or self.active_until == None):
-            return True
-        return False
+        return self.active and (self.active_until > datetime.today()
+                or self.active_until is None)
 
     def allow_free_trial(self):
         """
@@ -397,12 +446,12 @@ class Subscription(models.Model):
         :returns: :py:class:`Subscription`
         :raises: :py:class:`Exception` (of some kind) if bad juju
         """
-        response  = self._client.allow_free_trial(self.user.id)
+        response = self._client.allow_free_trial(self.user.id)
         for k in response:
             try:
                 if response[k] is not None:
-                    if getattr(self,k) != response[k]:
-                        setattr(self,k,response[k])
+                    if getattr(self, k) != response[k]:
+                        setattr(self, k, response[k])
             except AttributeError:
                 pass
         self.save()
@@ -416,12 +465,11 @@ class Subscription(models.Model):
             try:
                 if data[k] is not None:
                     if getattr(self, k) != data[k]:
-                        setattr(self,k,data[k])
+                        setattr(self, k, data[k])
             except AttributeError:
                 pass
         self.plan = plan
         self.save()
-
 
     def create_complimentary_subscription(self, time, unit, feature_level):
         """
@@ -459,22 +507,24 @@ class Gift(models.Model):
     created_at = models.DateField(auto_now_add=True)
     sent_at = models.DateField(blank=True, null=True)
 
-    def get_activation_url(self,current_app='spreedly'):
-        return 'http://%s%s' % (spreedly_settings.SPREEDLY_SITE_URL, reverse('gift_sign_up', args=[self.uuid]))
+    def get_activation_url(self, current_app='spreedly'):
+        return 'http://%s%s' % (spreedly_settings.SPREEDLY_SITE_URL,
+                reverse('gift_sign_up', args=[self.uuid]))
 
     def send_activation_email(self):
-        if not self.sent_at: #don't spam user with invitations
+        if not self.sent_at:  # don't spam user with invitations
             send_mail(
                 spreedly_settings.SPREEDLY_GIFT_EMAIL_SUBJECT,
                 render_to_string(spreedly_settings.SPREEDLY_GIFT_EMAIL, {
                     'message': self.message,
                     'plan_name': self.plan_name,
-                    'giver': '%s (%s)' % (self.from_user, self.from_user.email),
+                    'giver': '%s (%s)' % (self.from_user,
+                                          self.from_user.email),
                     'site': spreedly_settings.SPREEDLY_SITE_URL,
                     'register_url': self.get_activation_url()
                 }),
                 settings.DEFAULT_FROM_EMAIL,
-                [self.to_user.email,]
+                [self.to_user.email, ]
             )
             self.sent_at = datetime.today()
             self.save()
