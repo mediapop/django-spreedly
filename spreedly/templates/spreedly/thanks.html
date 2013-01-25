@@ -1,4 +1,3 @@
-{% load spreedly_tags %}
 <!DOCTYPE html>
 <html>
 	<head>
@@ -16,7 +15,7 @@
 			</h2>
 		{% else %}
 			<h1>This subscription is not yet active.</h1>
-			<h2>Please visit the following link to activate your subscription: <a href='{% existing_plan_url subscription.user %}'>Edit Subscription</a></h2>
+      <h2>Please visit the following link to activate your subscription: <a href='{{ subscription_url }}'>Edit Subscription</a></h2>
 		{% endif %}
 	</body>
 </html>

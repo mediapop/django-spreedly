@@ -36,7 +36,7 @@ class SubscribeMixin(object):
 
     def form_valid(self, form):
         form.save()
-        super(PlanList, self).form_valid(form)
+        super(SubscribeMixin, self).form_valid(form)
 
     def form_invalid(self, form):
         self.render_to_response(self.get_context_data(
@@ -72,9 +72,10 @@ class PlanList(SubscribeMixin, ListView):
         context = ListView.get_context_data(self, object_list=object_list)
         context.update(SubscribeMixin.get_context_data(self, **kwargs))
         if self.request.user.is_authenticated():
-            context['current_user_subscription'] = getattr(self.request.user, 'subscription', None)
-        else:
-            context['current_user_subscription'] = None
+            try:
+                context['current_user_subscription'] = self.request.user.subscription
+            except Subscription.DoesNotExist:
+                context['current_user_subscription'] = None
         return context
 
     def get_queryset(self):
@@ -119,20 +120,31 @@ class EmailSent(TemplateView):
 class SpreedlyReturn(TemplateView):
     template_name = 'spreedly/return.html'
 
-    def get_context_data(self, *args, **kwargs):
-        # removed gift, request and login url
-        self.context_data = super(SpreedlyReturn,self).get_context_data(*args, **kwargs)
-        user = get_object_or_404(User, pk=self.kwargs['user_id'])
-        plan = get_object_or_404(Plan, pk=self.kwargs['plan_pk'])
-        if self.request.GET.has_key('trial'):
+    def create_subscription(self, user, plan):
+        if self.request.GET.has_key('trial') or plan.plan_type == 'free_trial':
             if plan.trial_eligible(user):
                 subscription = plan.start_trial(user)
             else:
                 raise SuspiciousOperation("Trial asked for - but you are not eligibile for a free trial")
         else:
             subscription = Subscription.objects.get_or_create(user, plan)
+        return subscription
+
+    def get_context_data(self, plan, subscription, *args, **kwargs):
+        # removed gift, request and login url
+        self.context_data = super(SpreedlyReturn,self).get_context_data(*args, **kwargs)
+        self.context_data['plan'] = plan
+        if self.request.GET.has_key('next'):
+            self.context_data['next'] = self.request.GET['next']
         self.context_data['subscription'] = subscription
         return self.context_data
+
+    def get(self,request, *args, **kwargs):
+        user = get_object_or_404(User, pk=self.kwargs['user_id'])
+        plan = get_object_or_404(Plan, pk=self.kwargs['plan_pk'])
+        subscription = self.create_subscription(user, plan)
+        context_data = self.get_context_data(plan, subscription, **kwargs)
+        return self.render_to_response(context_data)
 
 
 @csrf_exempt

@@ -2,8 +2,6 @@ from django.conf.urls.defaults import *
 from views import (PlanList, EmailSent, SpreedlyReturn,
         SubscriptionDetails, PlanDetails, EditSubscriber)
 
-import spreedly.settings as spreedly_settings
-
 urlpatterns = patterns('spreedly.views',
     url(r'^email_sent/(?P<user_id>\d+)/$', EmailSent.as_view(), name='spreedly_email_sent'),
     url(r'^spreedly_listener/$', 'spreedly_listener', name='spreedly_listener'),

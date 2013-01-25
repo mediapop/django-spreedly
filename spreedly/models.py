@@ -13,6 +13,7 @@ from urlparse import urljoin
 import spreedly.settings as spreedly_settings
 from django.conf import settings
 import warnings
+from requests import HTTPError
 
 import logging
 logger = logging.getLogger(__name__)
@@ -162,27 +163,32 @@ class Plan(models.Model):
     def is_free_trial_plan(self):
         return self.plan_type == "free_trial"
 
-    def get_return_url(self, user):
+    def get_return_url(self, user, namespace=None):
         site = Site.objects.get(pk=settings.SITE_ID)
         base_url = 'https://{site.domain}/'.format(site=site)
-        url = urljoin(base_url, reverse('spreedly_return', args=[user.id, self.id]))
+        reverse_urlname = "{0}:spreedly_return".format(namespace) if namespace else 'spreedly_return'
+        url = urljoin(base_url, reverse(reverse_urlname, kwargs={
+            'user_id':user.id, 'plan_pk': self.id}))
         return url
 
-    def subscription_url(self,user):
+    def subscription_url(self, user, namespace=None):
         try:
             token = user.subscription.token
-        except (AttributeError, Subscription.DoesotExist):
+        except (AttributeError, Subscription.DoesNotExist):
             token = None
         subscription_url = self._client.get_signup_url(subscriber_id=user.id,plan_id=self.id,
             screen_name=user.username, token=token)
-        return_url = self.get_return_url(user)
-        return "{subscription_url)?return_url={return_url}".format(
+        return_url = self.get_return_url(user, namespace)
+        return "{subscription_url}?return_url={return_url}".format(
                 subscription_url=subscription_url,
                 return_url=return_url)
 
 
 class FeeGroup(models.Model):
     name = models.CharField(max_length=100, primary_key=True)
+
+    def __unicode__(self):
+        return unicode(self.name)
 
 
 class Fee(models.Model):
@@ -199,6 +205,9 @@ class Fee(models.Model):
     group = models.ForeignKey(FeeGroup)
     default_amount= models.DecimalField(max_digits=6, decimal_places=2, default='0',
         help_text=u'USD')
+
+    def __unicode__(self):
+        return u"{self.plan.name}: {self.name}".format(self=self)
 
     def add_fee(self, user, description, amount=None):
         """ .. py:method::add_fee(user, description[, amount])
@@ -298,11 +307,14 @@ class SubscriptionManager(models.Manager):
         except Subscription.DoesNotExist:
             subscription = Subscription()
             if not data:  # new client, no plan.
-                data = subscription._client.create_subscriber(user.id, user.username)
+                try:
+                    data = subscription._client.get_info(user.id)
+                except HTTPError:
+                    data = subscription._client.create_subscriber(user.id, user.username)
             for k in data:
                 try:
                     if data[k] is not None:
-                        if getattr(subscription, k) != data[k]:
+                        if getattr(subscription, k, None) != data[k]:
                             setattr(subscription,k,data[k])
                 except AttributeError:
                     pass
@@ -334,7 +346,7 @@ class Subscription(models.Model):
     recurring = models.BooleanField(default=False)
     active = models.BooleanField(default=False)
 
-    plan = models.ForeignKey(Plan, null=True, default=None)
+    plan = models.ForeignKey(Plan, null=True, default=None, on_delete=models.PROTECT)
 
     url = models.URLField(editable=False)
 
@@ -447,7 +459,7 @@ class Gift(models.Model):
     created_at = models.DateField(auto_now_add=True)
     sent_at = models.DateField(blank=True, null=True)
 
-    def get_activation_url(self):
+    def get_activation_url(self,current_app='spreedly'):
         return 'http://%s%s' % (spreedly_settings.SPREEDLY_SITE_URL, reverse('gift_sign_up', args=[self.uuid]))
 
     def send_activation_email(self):
