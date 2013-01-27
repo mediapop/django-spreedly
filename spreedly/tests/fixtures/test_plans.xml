@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<subscription-plans type="array">
+  <subscription-plan>
+    <id type="integer">12345</id>
+    <version type="integer">1</version>
+    <amount type="decimal">0.0</amount>
+    <minimum-needed-for-charge type="decimal">0.0</minimum-needed-for-charge>
+    <charge-after-first-period type="boolean">false</charge-after-first-period>
+    <charge-later-duration-quantity type="integer" nil="true"></charge-later-duration-quantity>
+    <charge-later-duration-units nil="true"></charge-later-duration-units>
+    <created-at type="datetime">2013-01-21T02:27:29Z</created-at>
+    <currency-code>USD</currency-code>
+    <description>Trial Plan</description>
+    <duration-quantity type="integer">0</duration-quantity>
+    <duration-units>days</duration-units>
+    <enabled type="boolean">true</enabled>
+    <feature-level>free_trial</feature-level>
+    <force-recurring type="boolean">false</force-recurring>
+    <name>Basic</name>
+    <needs-to-be-renewed type="boolean">false</needs-to-be-renewed>
+    <plan-type>free_trial</plan-type>
+    <return-url>https://www.example.com/return/</return-url>
+    <updated-at type="datetime">2013-01-21T02:27:29Z</updated-at>
+    <setup-fee-description></setup-fee-description>
+    <setup-fee-currency-code>USD</setup-fee-currency-code>
+    <setup-fee-amount type="decimal">0.0</setup-fee-amount>
+    <versions type="array">
+      <version type="SubscriptionPlan::Version">
+        <id type="integer">24680</id>
+        <amount type="decimal">0.0</amount>
+        <minimum-needed-for-charge type="decimal">0.0</minimum-needed-for-charge>
+        <charge-after-first-period type="boolean">false</charge-after-first-period>
+        <charge-later-duration-quantity type="integer" nil="true"></charge-later-duration-quantity>
+        <charge-later-duration-units type="SubscriptionPlan::Version" nil="true"></charge-later-duration-units>
+        <created-at type="datetime">2013-01-21T02:27:29Z</created-at>
+        <currency-code type="SubscriptionPlan::Version">USD</currency-code>
+        <description type="SubscriptionPlan::Version">Trial Plan</description>
+        <duration-quantity type="integer">0</duration-quantity>
+        <duration-units type="SubscriptionPlan::Version">days</duration-units>
+        <enabled type="boolean">true</enabled>
+        <feature-level type="SubscriptionPlan::Version">free_trial</feature-level>
+        <force-recurring type="boolean">false</force-recurring>
+        <name type="SubscriptionPlan::Version">Trial</name>
+        <needs-to-be-renewed type="boolean">false</needs-to-be-renewed>
+        <plan-type type="SubscriptionPlan::Version">free_trial</plan-type>
+        <return-url type="SubscriptionPlan::Version">https://www.example.com/return/</return-url>
+        <updated-at type="datetime">2013-01-21T02:27:29Z</updated-at>
+        <version type="integer">1</version>
+        <subscription-plan-id type="integer">12345</subscription-plan-id>
+        <setup-fee-description type="SubscriptionPlan::Version"></setup-fee-description>
+        <setup-fee-currency-code type="SubscriptionPlan::Version">USD</setup-fee-currency-code>
+        <setup-fee-amount type="decimal">0.0</setup-fee-amount>
+        <terms type="string">Lifetime</terms>
+      </version>
+    </versions>
+    <terms type="string">Lifetime</terms>
+    <price type="decimal">0.0</price>
+  </subscription-plan>
+  <subscription-plan>
+    <id type="integer">67890</id>
+    <version type="integer">1</version>
+    <amount type="decimal">100.0</amount>
+    <minimum-needed-for-charge type="decimal">0.0</minimum-needed-for-charge>
+    <charge-after-first-period type="boolean">false</charge-after-first-period>
+    <charge-later-duration-quantity type="integer" nil="true"></charge-later-duration-quantity>
+    <charge-later-duration-units nil="true"></charge-later-duration-units>
+    <created-at type="datetime">2013-01-21T02:28:58Z</created-at>
+    <currency-code>USD</currency-code>
+    <description>Paid Plan</description>
+    <duration-quantity type="integer">1</duration-quantity>
+    <duration-units>months</duration-units>
+    <enabled type="boolean">true</enabled>
+    <feature-level>paid</feature-level>
+    <force-recurring type="boolean">true</force-recurring>
+    <name>Paid</name>
+    <needs-to-be-renewed type="boolean">true</needs-to-be-renewed>
+    <plan-type>regular</plan-type>
+    <return-url>https://www.example.com/return/</return-url>
+    <updated-at type="datetime">2013-01-21T02:28:58Z</updated-at>
+    <setup-fee-description></setup-fee-description>
+    <setup-fee-currency-code>USD</setup-fee-currency-code>
+    <setup-fee-amount type="decimal">0.0</setup-fee-amount>
+    <versions type="array">
+      <version type="SubscriptionPlan::Version">
+        <id type="integer">54321</id>
+        <amount type="decimal">100.0</amount>
+        <minimum-needed-for-charge type="decimal">0.0</minimum-needed-for-charge>
+        <charge-after-first-period type="boolean">false</charge-after-first-period>
+        <charge-later-duration-quantity type="integer" nil="true"></charge-later-duration-quantity>
+        <charge-later-duration-units type="SubscriptionPlan::Version" nil="true"></charge-later-duration-units>
+        <created-at type="datetime">2013-01-21T02:28:58Z</created-at>
+        <currency-code type="SubscriptionPlan::Version">USD</currency-code>
+        <description type="SubscriptionPlan::Version">Paid Plan</description>
+        <duration-quantity type="integer">1</duration-quantity>
+        <duration-units type="SubscriptionPlan::Version">months</duration-units>
+        <enabled type="boolean">true</enabled>
+        <feature-level type="SubscriptionPlan::Version">paid</feature-level>
+        <force-recurring type="boolean">true</force-recurring>
+        <name type="SubscriptionPlan::Version">Paid</name>
+        <needs-to-be-renewed type="boolean">true</needs-to-be-renewed>
+        <plan-type type="SubscriptionPlan::Version">regular</plan-type>
+        <return-url type="SubscriptionPlan::Version">https://www.example.com/return/</return-url>
+        <updated-at type="datetime">2013-01-21T02:28:58Z</updated-at>
+        <version type="integer">1</version>
+        <subscription-plan-id type="integer">67890</subscription-plan-id>
+        <setup-fee-description type="SubscriptionPlan::Version"></setup-fee-description>
+        <setup-fee-currency-code type="SubscriptionPlan::Version">USD</setup-fee-currency-code>
+        <setup-fee-amount type="decimal">0.0</setup-fee-amount>
+        <terms type="string">1 month</terms>
+      </version>
+    </versions>
+    <terms type="string">1 month</terms>
+    <price type="decimal">100.0</price>
+  </subscription-plan>
+</subscription-plans>

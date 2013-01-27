@@ -1,0 +1,46 @@
+[
+  {
+    "pk": 12345,
+    "model": "spreedly.plan",
+    "fields": {
+      "terms": "Lifetime",
+      "name": "Basic",
+      "force_recurring": false,
+      "needs_to_be_renewed": false,
+      "price": "0.00",
+      "enabled": true,
+      "plan_type": "free_trial",
+      "duration_quantity": 0,
+      "duration_units": "days",
+      "version": 3,
+      "feature_level": "Basic",
+      "spreedly_site_id": 12345,
+      "date_changed": null,
+      "created_at": "2012-12-31T08:53:26Z",
+      "return_url": "https://www.example.com/return/",
+      "description": "Trial plan"
+    }
+  },
+  {
+    "pk": 67890,
+    "model": "spreedly.plan",
+    "fields": {
+      "terms": "1 month",
+      "name": "Paid",
+      "force_recurring": false,
+      "needs_to_be_renewed": false,
+      "price": "100.00",
+      "enabled": true,
+      "plan_type": "regular",
+      "duration_quantity": 1,
+      "duration_units": "months",
+      "version": 1,
+      "feature_level": "asdf",
+      "spreedly_site_id": 67890,
+      "date_changed": null,
+      "created_at": null,
+      "return_url": "https://www.example.com/return/",
+      "description": "Paid"
+    }
+  }
+]

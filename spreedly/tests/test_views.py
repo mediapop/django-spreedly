@@ -1,15 +1,12 @@
 from django.conf import settings
 from django.contrib.auth.models import User
-from pyspreedly.api import Client
 from django.test import TestCase
 from django.test.client import Client as DjClient
 from django.core.urlresolvers import reverse
 from pyspreedly import api
-from spreedly.functions import sync_plans
-from spreedly.models import HttpUnprocessableEntity
 from spreedly.models import Plan, Subscription
 from django.utils.unittest import skip
-
+from . helpers import SpreedlySubscriptionXML
 
 class TestViewsExist(TestCase):
     def setUp(self):

@@ -1,0 +1,27 @@
+[
+  {
+    "pk": "features",
+    "model": "spreedly.feegroup",
+    "fields": {}
+  },
+  {
+    "pk": 1,
+    "model": "spreedly.fee",
+    "fields": {
+      "default_amount": "0.00",
+      "group": "features",
+      "plan": 12345,
+      "name": "standard"
+    }
+  },
+  {
+    "pk": 2,
+    "model": "spreedly.fee",
+    "fields": {
+      "default_amount": "0.00",
+      "group": "features",
+      "plan": 67890,
+      "name": "standard"
+    }
+  },
+]

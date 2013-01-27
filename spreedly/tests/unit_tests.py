@@ -2,14 +2,11 @@ from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TestCase
 from pyspreedly.api import Client
-from django.core.urlresolvers import reverse
-from spreedly.functions import sync_plans
 from spreedly.models import HttpUnprocessableEntity
-from spreedly.models import Plan, Fee, FeeGroup, LineItem, Subscription
+from spreedly.models import Plan, Fee, FeeGroup, Subscription
 from datetime import datetime, timedelta
 import requests
 from mock import patch
-import ipdb
 
 
 class TestSyncPlans(TestCase):
