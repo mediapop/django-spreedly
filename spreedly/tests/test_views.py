@@ -1,65 +1,92 @@
 from django.conf import settings
 from django.contrib.auth.models import User
-from pyspreedly.api import Client
 from django.test import TestCase
 from django.test.client import Client as DjClient
 from django.core.urlresolvers import reverse
 from pyspreedly import api
-from spreedly.functions import sync_plans
-from spreedly.models import HttpUnprocessableEntity
 from spreedly.models import Plan, Subscription
 from django.utils.unittest import skip
+from . helpers import SpreedlySubscriptionXML
+from mock import patch
 
 
-class TestReturn(TestCase):
+class ViewsSetup(TestCase):
+    fixtures = ['plans.json', 'fees.json']
+    def _setup_subscription_with_mock(self, status_code=200, plan=None, user=None):
+        sxml = SpreedlySubscriptionXML()
+        if not plan:
+            plan = self.plan
+        if not user:
+            user = self.user
+        xml = sxml.subscription_xml(plan.id, user.id)
+        with patch('requests.get') as response_get_mock:
+            with patch('requests.models.Response') as response_mock:
+                response_mock.status_code = status_code
+                response_mock.text = xml
+                response_get_mock.return_value = response_mock
+                self.subscription = Subscription.objects.get_or_create(
+                        user=user,
+                        plan=plan)
+
     def setUp(self):
         self.spreedly_client = api.Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
         self.spreedly_client.cleanup()
         self.client = DjClient()
-        Plan.objects.sync_plans()
-        self.plan = Plan.objects.all()[0]
-        user = User.objects.create_user(username='root',password='secret')
-        user.is_staff = True
-        user.save()
-        self.user = User.objects.create_user(username='tester',password='secret')
-        self.user2 = User.objects.create_user(username='tester2',password='secret')
+        self.patcher = patch.object(Plan.objects, 'sync_plans')
+        self.mock_sync_plans = self.patcher.start()
+        self.mock_sync_plans.return_value = None
+        self.user = User.objects.create_user(username='test user',
+                email='test@mediapopinc.com',
+                password='testpassword')
+        self.trial_plan = Plan.objects.get(id=12345)
+        self.paid_plan = Plan.objects.get(id=67890)
+        self._setup_subscription_with_mock(plan=self.paid_plan)
 
-    def tearDown(self):
-        self.spreedly_client.cleanup()
+    def tearDwon(self):
+        self.patcher.stop()
 
-    def TestSpreedlyReturnWithNoSubscription(self):
-        self.assertEquals(Subscription.objects.all().count(), 0)
-        url = reverse("spreedly_return", kwargs={'user_id': self.user.id,
-                                                 'plan_id': self.plan.id})
+class TestViewsExist(ViewsSetup):
+    def test_plan_list_view(self):
+        """(the poorly named) List view should show the plans, and a form."""
+        url = reverse('plan_list')
         response = self.client.get(url)
-        self.assertEquals(response.status_code, 404,
-                "Created return without spreedly having the subscription")
-        self.spreedly_client.create_subscriber(
-                customer_id=self.user.id,
-                screen_name=self.user.username)
+        self.assertTemplateUsed(response,'spreedly/plan_list.html')
+
+    def test_list_view(self):
+        """there should be a view which shows a list of plans - enabled and not"""
+        self.skipTest("Add real tests for this")
+        url = reverse('plan_list')  #Whu?
         response = self.client.get(url)
-        self.assertEquals(response.status_code, 200,
-                "Failed to create return with spreedly having the" \
-                " subscription")
-        self.assertEquals(Subscription.objects.all().count(), 1)
+        self.assertTemplateUsed(response,'spreedly/plan_list.html')
 
+    def test_buy_view(self):
+        """there should be a view which sends you to spreedly for purchace"""
+        self.skipTest("Add real tests for this")
+        url = reverse('plan_list')  #Again??
+        response = self.client.get(url)
+        self.assertTemplateUsed(response,'spreedly/plan_list.html')
 
-class TestViewsExist(TestCase):
+    def test_email_set(self):
+        """Email sent view should also exist"""
     def setUp(self):
         self.spreedly_client = api.Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
         self.spreedly_client.cleanup()
         self.client = DjClient()
-        Plan.objects.sync_plans()
-        user = User.objects.create_user(username='root',password='secret')
-        user.is_staff = True
-        user.save()
-        user = User.objects.create_user(username='tester',password='secret')
-        self.subscriber = Subscription.objects.get_or_create(user)
-        user = User.objects.create_user(username='tester2',password='secret')
+        self.patcher = patch.object(Plan.objects, 'sync_plans')
+        self.mock_sync_plans = self.patcher.start()
+        self.mock_sync_plans.return_value = None
+        self.user = User.objects.create_user(username='test user',
+                email='test@mediapopinc.com',
+                password='testpassword')
+        import ipdb; ipdb.set_trace()  # BREAKPOINT
+        self.trial_plan = Plan.objects.get(id=12345)
+        self.paid_plan = Plan.objects.get(id=67890)
+        self._setup_subscription_with_mock(plan=self.paid_plan)
 
     def tearDown(self):
-        self.spreedly_client.cleanup()
+        self.patcher.stop()
 
+class TestViewsExist(ViewsSetup):
     def test_plan_list_view(self):
         """(the poorly named) List view should show the plans, and a form."""
         url = reverse('plan_list')
@@ -118,7 +145,7 @@ class TestViewsExist(TestCase):
         response = self.client.get(url)
         self.assertTemplateUsed(response,'spreedly/subscription_details.html')
 
-    @skip("not ready")
+    @skip("Not ready")
     def test_edit_subscriber(self):
         """Subscribers are mutable, change them"""
         url = reverse('edit_subscription',kwargs={'user_id':self.subscriber.user.id})

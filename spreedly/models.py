@@ -148,7 +148,15 @@ class Plan(models.Model):
 
         """
         if self.trial_eligible(user):
-            response = self._client.subscribe(user.id, self.id)
+# user needs to exist on spreedly side before it can be signed up for trial
+            try:
+                self._client.get_info(user.id)
+            except HTTPError:
+                self._client.create_subscriber(customer_id=user.id,
+                                               screen_name=user.username)
+
+            response = self._client.subscribe(subscriber_id=user.id,
+                                              plan_id=self.id)
             return Subscription.objects.get_or_create(user, self, response)
         else:
             raise self.NotEligibile()

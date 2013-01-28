@@ -9,6 +9,8 @@ DICT_CONF ={
                 }
             },
         "ROOT_URLCONF"      : "tests.urls",
+        "USE_TZ"            : True,
+        "TIME_ZONE"         : 'Asia/Singapore',
         "TEMPLATE_LOADERS"  : (
                         "django.template.loaders.filesystem.Loader",
                         "django.template.loaders.app_directories.Loader",
@@ -27,7 +29,8 @@ DICT_CONF ={
             'pyspreedly',
             'spreedly',
             ),
-        "FIXTURE_DIRS" : [path(__file__).dirname() / 'fixtures',],
+        "FIXTURE_DIRS" : [path(__file__).dirname() / 'fixtures',
+                          path(__file__).dirname().dirname() / 'spreedly/tests/fixtures/',],
         "SPREEDLY_AUTH_TOKEN" : SPREEDLY_AUTH_TOKEN,
         "SPREEDLY_SITE_NAME"  : SPREEDLY_SITE_NAME,
         "SITE_ID" : 1,

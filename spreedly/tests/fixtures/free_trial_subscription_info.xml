@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<subscriber>
+  <grace-until type="datetime" nil="true"></grace-until>
+  <ready-to-renew type="boolean">false</ready-to-renew>
+  <ready-to-renew-since type="datetime" nil="true"></ready-to-renew-since>
+  <active-until type="datetime" nil="true"></active-until>
+  <billing-first-name nil="true"></billing-first-name>
+  <billing-last-name nil="true"></billing-last-name>
+  <created-at type="datetime">2013-01-28T04:02:36Z</created-at>
+  <customer-id>3</customer-id>
+  <eligible-for-free-trial type="boolean">false</eligible-for-free-trial>
+  <email nil="true"></email>
+  <lifetime-subscription type="boolean">true</lifetime-subscription>
+  <on-trial type="boolean">true</on-trial>
+  <on-metered type="boolean">false</on-metered>
+  <recurring type="boolean">false</recurring>
+  <screen-name>tester</screen-name>
+  <store-credit type="decimal">0.0</store-credit>
+  <store-credit-currency-code>USD</store-credit-currency-code>
+  <token>a4e2ab63804fc1170869cbc54f3da53e6e0730b5</token>
+  <updated-at type="datetime">2013-01-28T04:02:59Z</updated-at>
+  <on-gift type="boolean">false</on-gift>
+  <eligible-for-setup-fee type="boolean">true</eligible-for-setup-fee>
+  <card-expires-before-next-auto-renew type="boolean">false</card-expires-before-next-auto-renew>
+  <subscription-plan-name>Basic</subscription-plan-name>
+  <subscription-plan-version>
+    <id type="integer">45693</id>
+    <amount type="decimal">0.0</amount>
+    <minimum-needed-for-charge type="decimal">0.0</minimum-needed-for-charge>
+    <charge-after-first-period type="boolean">false</charge-after-first-period>
+    <charge-later-duration-quantity type="integer" nil="true"></charge-later-duration-quantity>
+    <charge-later-duration-units nil="true"></charge-later-duration-units>
+    <created-at type="datetime">2013-01-21T02:27:29Z</created-at>
+    <currency-code>USD</currency-code>
+    <description>Trial Plan with limited users</description>
+    <duration-quantity type="integer">0</duration-quantity>
+    <duration-units>days</duration-units>
+    <enabled type="boolean">true</enabled>
+    <feature-level>free_trial</feature-level>
+    <force-recurring type="boolean">false</force-recurring>
+    <name>Basic</name>
+    <needs-to-be-renewed type="boolean">false</needs-to-be-renewed>
+    <plan-type>free_trial</plan-type>
+    <return-url>https://dev.mediapop.co/payments/return/</return-url>
+    <updated-at type="datetime">2013-01-21T02:27:29Z</updated-at>
+    <version type="integer">1</version>
+    <subscription-plan-id type="integer">22401</subscription-plan-id>
+    <setup-fee-description></setup-fee-description>
+    <setup-fee-currency-code>USD</setup-fee-currency-code>
+    <setup-fee-amount type="decimal">0.0</setup-fee-amount>
+    <terms type="string">Lifetime</terms>
+  </subscription-plan-version>
+  <active type="boolean">true</active>
+  <in-grace-period type="boolean">false</in-grace-period>
+  <feature-level type="string">free_trial</feature-level>
+  <payment-account-on-file type="boolean">false</payment-account-on-file>
+  <payment-account-display type="string"></payment-account-display>
+  <billing-address1 type="string"></billing-address1>
+  <billing-city type="string"></billing-city>
+  <billing-state type="string"></billing-state>
+  <billing-zip type="string"></billing-zip>
+  <billing-country type="string"></billing-country>
+  <billing-phone-number type="string"></billing-phone-number>
+  <pagination-id type="string">1123014</pagination-id>
+  <invoices type="array">
+    <invoice>
+      <response-message nil="true"></response-message>
+      <response-client-message nil="true"></response-client-message>
+      <response-customer-message nil="true"></response-customer-message>
+      <closed type="boolean">true</closed>
+      <updated-at type="datetime">2013-01-28T04:02:59Z</updated-at>
+      <created-at type="datetime">2013-01-28T04:02:55Z</created-at>
+      <token>1f879fc45c6d4d7d9de06860b3e08b2d227d5f94</token>
+      <amount type="decimal">0.0</amount>
+      <price>$0.00</price>
+      <currency-code>USD</currency-code>
+      <metadata>free_trial</metadata>
+      <gateway-transaction-reference nil="true"></gateway-transaction-reference>
+      <line-items type="array">
+        <line-item>
+          <amount type="decimal">0.0</amount>
+          <notes nil="true"></notes>
+          <currency-code>USD</currency-code>
+          <description>Lifetime</description>
+          <price>$0.00</price>
+          <feature-level>free_trial</feature-level>
+          <metadata>free_trial</metadata>
+        </line-item>
+      </line-items>
+    </invoice>
+  </invoices>
+</subscriber>
