@@ -11,6 +11,39 @@ from spreedly.models import Plan, Subscription
 from django.utils.unittest import skip
 
 
+class TestReturn(TestCase):
+    def setUp(self):
+        self.spreedly_client = api.Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
+        self.spreedly_client.cleanup()
+        self.client = DjClient()
+        Plan.objects.sync_plans()
+        self.plan = Plan.objects.all()[0]
+        user = User.objects.create_user(username='root',password='secret')
+        user.is_staff = True
+        user.save()
+        self.user = User.objects.create_user(username='tester',password='secret')
+        self.user2 = User.objects.create_user(username='tester2',password='secret')
+
+    def tearDown(self):
+        self.spreedly_client.cleanup()
+
+    def TestSpreedlyReturnWithNoSubscription(self):
+        self.assertEquals(Subscription.objects.all().count(), 0)
+        url = reverse("spreedly_return", kwargs={'user_id': self.user.id,
+                                                 'plan_id': self.plan.id})
+        response = self.client.get(url)
+        self.assertEquals(response.status_code, 404,
+                "Created return without spreedly having the subscription")
+        self.spreedly_client.create_subscriber(
+                customer_id=self.user.id,
+                screen_name=self.user.username)
+        response = self.client.get(url)
+        self.assertEquals(response.status_code, 200,
+                "Failed to create return with spreedly having the" \
+                " subscription")
+        self.assertEquals(Subscription.objects.all().count(), 1)
+
+
 class TestViewsExist(TestCase):
     def setUp(self):
         self.spreedly_client = api.Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
@@ -85,13 +118,12 @@ class TestViewsExist(TestCase):
         response = self.client.get(url)
         self.assertTemplateUsed(response,'spreedly/subscription_details.html')
 
-# for some reason the skip decorator isn't wroking, so commenting this out.
-#    @skip
-#    def test_edit_subscriber(self):
-#        """Subscribers are mutable, change them"""
-#        url = reverse('edit_subscription',kwargs={'user_id':self.subscriber.user.id})
-#        response = self.client.get(url)
-#        self.assertRedirects(response,reverse('login'))
-#        self.client.login(username='root',password='secret')
-#        response = self.client.get(url)
-#        self.assertTemplateUsed(response,'spreedly/return.html')
+    @skip("not ready")
+    def test_edit_subscriber(self):
+        """Subscribers are mutable, change them"""
+        url = reverse('edit_subscription',kwargs={'user_id':self.subscriber.user.id})
+        response = self.client.get(url)
+        self.assertRedirects(response,reverse('login'))
+        self.client.login(username='root',password='secret')
+        response = self.client.get(url)
+        self.assertTemplateUsed(response,'spreedly/return.html')

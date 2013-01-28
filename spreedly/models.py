@@ -10,9 +10,9 @@ from django.db import models
 from django.http import Http404
 from django.template.loader import render_to_string
 from django.utils.translation import ugettext as _
-from django.core.exceptions import IntegrityError
+from django.db import IntegrityError
 
-from . import api
+from pyspreedly import api
 import spreedly.settings as spreedly_settings
 
 from requests import HTTPError
