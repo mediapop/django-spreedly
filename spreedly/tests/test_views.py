@@ -7,23 +7,46 @@ from pyspreedly import api
 from spreedly.models import Plan, Subscription
 from django.utils.unittest import skip
 from . helpers import SpreedlySubscriptionXML
+from mock import patch
 
-class TestViewsExist(TestCase):
+
+class ViewsSetup(TestCase):
+    fixtures = ['plans', 'fees']
+    def _setup_subscription_with_mock(self, status_code=200, plan=None, user=None):
+        sxml = SpreedlySubscriptionXML()
+        if not plan:
+            plan = self.plan
+        if not user:
+            user = self.user
+        xml = sxml.subscription_xml(plan.id, user.id)
+        with patch('requests.get') as response_get_mock:
+            with patch('requests.models.Response') as response_mock:
+                response_mock.status_code = status_code
+                response_mock.text = xml
+                response_get_mock.return_value = response_mock
+                self.subscription = Subscription.objects.get_or_create(
+                        user=user,
+                        plan=plan)
+
     def setUp(self):
         self.spreedly_client = api.Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
         self.spreedly_client.cleanup()
         self.client = DjClient()
-        Plan.objects.sync_plans()
-        user = User.objects.create_user(username='root',password='secret')
-        user.is_staff = True
-        user.save()
-        user = User.objects.create_user(username='tester',password='secret')
-        self.subscriber = Subscription.objects.get_or_create(user)
-        user = User.objects.create_user(username='tester2',password='secret')
+        self.patcher = patch.object(Plan.objects, 'sync_plans')
+        self.mock_sync_plans = self.patcher.start()
+        self.mock_sync_plans.return_value = None
+        self.user = User.objects.create_user(username='test user',
+                email='test@mediapopinc.com',
+                password='testpassword')
+        import ipdb; ipdb.set_trace()  # BREAKPOINT
+        self.trial_plan = Plan.objects.get(id=12345)
+        self.paid_plan = Plan.objects.get(id=67890)
+        self._setup_subscription_with_mock(plan=self.paid_plan)
 
-    def tearDown(self):
-        self.spreedly_client.cleanup()
+    def tearDwon(self):
+        self.patcher.stop()
 
+class TestViewsExist(ViewsSetup):
     def test_plan_list_view(self):
         """(the poorly named) List view should show the plans, and a form."""
         url = reverse('plan_list')
@@ -82,13 +105,12 @@ class TestViewsExist(TestCase):
         response = self.client.get(url)
         self.assertTemplateUsed(response,'spreedly/subscription_details.html')
 
-# for some reason the skip decorator isn't wroking, so commenting this out.
-#    @skip
-#    def test_edit_subscriber(self):
-#        """Subscribers are mutable, change them"""
-#        url = reverse('edit_subscription',kwargs={'user_id':self.subscriber.user.id})
-#        response = self.client.get(url)
-#        self.assertRedirects(response,reverse('login'))
-#        self.client.login(username='root',password='secret')
-#        response = self.client.get(url)
-#        self.assertTemplateUsed(response,'spreedly/return.html')
+    @skip("Not ready")
+    def test_edit_subscriber(self):
+        """Subscribers are mutable, change them"""
+        url = reverse('edit_subscription',kwargs={'user_id':self.subscriber.user.id})
+        response = self.client.get(url)
+        self.assertRedirects(response,reverse('login'))
+        self.client.login(username='root',password='secret')
+        response = self.client.get(url)
+        self.assertTemplateUsed(response,'spreedly/return.html')

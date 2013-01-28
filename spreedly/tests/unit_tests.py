@@ -6,42 +6,90 @@ from spreedly.models import HttpUnprocessableEntity
 from spreedly.models import Plan, Fee, FeeGroup, Subscription
 from datetime import datetime, timedelta
 import requests
+from django.utils.unittest import skip
+from . helpers import SpreedlySubscriptionXML
 from mock import patch
+from StringIO import StringIO
+
+
+class TestCaseSetup(TestCase):
+    fixtures = ['plans', 'fees']
+    def _setup_subscription_with_mock(self, status_code=200, plan=None, user=None):
+        sxml = SpreedlySubscriptionXML()
+        if not plan:
+            plan = self.plan
+        if not user:
+            user = self.user
+        xml = sxml.subscription_xml(plan.id, user.id)
+        with patch('requests.get') as response_get_mock:
+            with patch('requests.models.Response') as response_mock:
+                response_mock.status_code = status_code
+                response_mock.text = xml
+                response_get_mock.return_value = response_mock
+                self.subscription = Subscription.objects.get_or_create(
+                        user=user,
+                        plan=plan)
+
+    def setUp(self):
+        self.spreedly_client = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
+        self.spreedly_client.cleanup()
+        self.patcher = patch.object(Plan.objects, 'sync_plans')
+        self.mock_sync_plans = self.patcher.start()
+        self.mock_sync_plans.return_value = None
+        self.user = User.objects.create_user(username='test user',
+                email='test@mediapopinc.com',
+                password='testpassword')
+        self.trial_plan = Plan.objects.get(id=12345)
+        self.paid_plan = Plan.objects.get(id=67890)
+        self._setup_subscription_with_mock(plan=self.paid_plan)
+
+    def tearDwon(self):
+        self.patcher.stop()
 
 
 class TestSyncPlans(TestCase):
     def setUp(self):
-        user = User.objects.create(username='test')
-        self.sclient = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
+        self.user = User.objects.create_user(username='test',
+                email='test@mediapopinc.com',
+                password='testpassword')
+        self.spreedly_client = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
 
     def tearDown(self):
         # Remove all subscribers
-        self.sclient.cleanup()
+        self.spreedly_client.cleanup()
 
     def test_sync_plans(self):
         # Initial sync
-        spreedly_count = len(self.sclient.get_plans())
-        Plan.objects.sync_plans()
-        qs = Plan.objects.all()
-        self.assertEquals(qs.count(), spreedly_count)
+        status_code = 200
+        sxml = SpreedlySubscriptionXML()
+        xml = sxml.all_plans()
+        with patch('requests.get') as response_get_mock:
+            with patch('requests.models.Response') as response_mock:
+                response_mock.status_code = status_code
+                response_mock.text = xml
+                response_get_mock.return_value = response_mock
+                spreedly_count = len(self.spreedly_client.get_plans())
+                Plan.objects.sync_plans()
+                qs = Plan.objects.all()
+                self.assertEquals(qs.count(), spreedly_count)
 
 
 class TestPlan(TestCase):
     fixtures = ['sites',]
     @classmethod
     def setUpClass(self):
-        self.sclient = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
+        self.spreedly_client = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
         Plan.objects.sync_plans()
         self.plan = Plan.objects.get(pk=21327)  # make sure this is trial-enabled
         self.plan2 = Plan.objects.get(pk=22215)  # and that this one is not
 
     def setUp(self):
         self.user = User.objects.create(username='test')
-        self.client_data = self.sclient.create_subscriber(self.user.id,'test')
+        self.client_data = self.spreedly_client.create_subscriber(self.user.id,'test')
 
     def tearDown(self):
         self.user.delete()
-        self.sclient.cleanup()
+        self.spreedly_client.cleanup()
 
     def test_trial_eligibility(self):
         """Plan should have a check for eligibility"""
@@ -68,15 +116,15 @@ class TestSubscriptions(TestCase):
         Plan.objects.sync_plans()
 
     def setUp(self):
-        self.sclient = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
+        self.spreedly_client = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
         self.plan = Plan.objects.get(pk=21327)
         self.user = User.objects.create(username='test')
-        self.client_data = self.sclient.create_subscriber(self.user.id,'test')
+        self.client_data = self.spreedly_client.create_subscriber(self.user.id,'test')
         self.subscription = self.plan.start_trial(self.user)
 
     def tearDown(self):
         self.user.delete()
-        self.sclient.cleanup()
+        self.spreedly_client.cleanup()
 
     def test_add_charge(self):
         """This should fail as it is a trial plan - so no fee should be added.
@@ -99,15 +147,15 @@ class TestFees(TestCase):
         Plan.objects.sync_plans()
 
     def setUp(self):
-        self.sclient = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
+        self.spreedly_client = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
         self.plan = Plan.objects.get(pk=21431)
         self.user = User.objects.create(username='test')
-        self.client_data = self.sclient.create_subscriber(self.user.id,'test')
+        self.client_data = self.spreedly_client.create_subscriber(self.user.id,'test')
         # Get them subscribed to a real Plan
 
     def tearDown(self):
         self.user.delete()
-        self.sclient.cleanup()
+        self.spreedly_client.cleanup()
 
     def test_create_fee(self):
         fee_group = FeeGroup.objects.create(name="Test feegroup 1")
@@ -147,10 +195,10 @@ class TestAddFee(TestCase):
         Plan.objects.sync_plans()
 
     def setUp(self):
-        self.sclient = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
+        self.spreedly_client = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
         self.plan = Plan.objects.get(pk=22215)
         self.user = User.objects.create(username='test')
-        self.client_data = self.sclient.create_subscriber(self.user.id,'test')
+        self.client_data = self.spreedly_client.create_subscriber(self.user.id,'test')
         self.fee_group = FeeGroup.objects.create(name="Test feegroup 1")
         self.fee_group2 = FeeGroup.objects.create(name="test feegroup 2")
         self.fee = Fee.objects.create(
@@ -171,7 +219,7 @@ class TestAddFee(TestCase):
         self.fee_group.delete()
         self.fee_group2.delete()
         self.user.delete()
-        self.sclient.cleanup()
+        self.spreedly_client.cleanup()
 
     def test_add_fee(self):
         self.skipTest("add fee needs to be mocked some how")
