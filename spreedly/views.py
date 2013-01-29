@@ -24,15 +24,16 @@ import spreedly.settings as spreedly_settings
 from spreedly.forms import SubscribeForm, GiftRegisterForm, AdminGiftForm, SubscribeUpdateForm
 from spreedly import signals
 
-class SubscribeMixin(object):
+class SubscribeMixin(FormMixin):
     """
     inherits from FormMixin, handles, get_success_url, form valid, invalid and
     post.  Needs to be integerated into get context data and get_success_url
     """
     form_class = SubscribeForm
+    success_url = 'spreedly_email_sent'
 
     def get_success_url(self):
-        return reverse('spreedly_email_sent', args=[self.request.user_id])
+        return reverse(self.success_url, args=[self.request.user_id])
 
     def form_valid(self, form):
         form.save()
