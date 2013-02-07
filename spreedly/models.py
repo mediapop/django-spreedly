@@ -113,6 +113,9 @@ class Plan(models.Model):
     class NotEligibile(Exception):
         pass
 
+    def natural_key(self):
+        return self.name
+
     def get_absolute_url(self):
         return reverse('plan_details', kwargs={'plan_pk': self.id})
 
