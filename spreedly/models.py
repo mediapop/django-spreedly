@@ -41,6 +41,9 @@ class PlanManager(models.Manager):
         """
         return self.model.objects.filter(enabled=True)
 
+    def get_by_natural_key(self, name):
+        return self.get(name=name)
+
     def sync_plans(self):
         """
         Gets a full list of plans from spreedly, and updates the local db
