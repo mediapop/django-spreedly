@@ -471,9 +471,11 @@ class Subscription(models.Model):
         self.save()
         return self
 
-    def update_subscription(self, data):
+    def update_subscription(self, data=None):
         """update a subscription with supplied data"""
         #TODO calculate surchargs/credits caused by changes.
+        if data is None:
+            data = self._client.get_info(self.user.id)
         plan = Plan.objects.get(pk=data['subscription_plan_version']['id'])
         for k in data:
             try:
