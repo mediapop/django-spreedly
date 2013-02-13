@@ -476,7 +476,7 @@ class Subscription(models.Model):
         #TODO calculate surchargs/credits caused by changes.
         if data is None:
             data = self._client.get_info(self.user.id)
-        plan = Plan.objects.get(pk=data['subscription_plan_version']['id'])
+        plan = Plan.objects.get(pk=data['subscription_plan_version']['subscription_plan_id'])
         for k in data:
             try:
                 if data[k] is not None:
