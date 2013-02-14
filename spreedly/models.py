@@ -140,7 +140,7 @@ class Plan(models.Model):
             subscription = user.subscription
             return (subscription.plan == self and
                     subscription.eligible_for_free_trial)
-        except Subscription.DoesNotExist:
+        except:
             return self.is_free_trial_plan
 
     def start_trial(self, user):
