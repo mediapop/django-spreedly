@@ -19,9 +19,9 @@ from django.views.generic.edit import FormMixin
 from django.core.urlresolvers import reverse
 
 from pyspreedly.api import Client
-from spreedly.models import Plan, Subscription, Gift
+from spreedly.models import Plan, Subscription
 import spreedly.settings as spreedly_settings
-from spreedly.forms import SubscribeForm, GiftRegisterForm, AdminGiftForm, SubscribeUpdateForm
+from spreedly.forms import SubscribeForm, SubscribeUpdateForm
 from spreedly import signals
 
 class SubscribeMixin(FormMixin):
@@ -174,9 +174,6 @@ def spreedly_listener(request):
                     except User.DoesNotExist:
                         # TODO not sure what exactly to do here. Delete the subscripton on spreedly?
                         pass
-                #handle gifts
-                for gift in Gift.objects.filter(to_user__pk__in=subscriber_ids):
-                    gift.send_activation_email()
     return HttpResponse() #200 OK
 
 
