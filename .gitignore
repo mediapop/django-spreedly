@@ -8,7 +8,18 @@ settings_local.py
 *.swp
 *.swo
 
+# git stuff
+*.orig
+
+# Rope
+
+.ropeproject/*
+
 # setup stuff
 *.egg-info/*
+
+dist/*
+build/*
+pyspreedly*egg/*
 
 django_spreedly.egg-info/*

@@ -47,19 +47,23 @@ class SpreedlySubscriptionXML(object):
         """Update the user_id to the supplied"""
         subscriber_root.find('./customer-id').text = str(user_id)
 
+    def _update_user_screenname(self, subscriber_root, screen_name):
+        """Update the user_id to the supplied"""
+        subscriber_root.find('./screen-name').text = str(screen_name)
+
     def all_plans(self):
         xml_io = StringIO()
-        self.root.write(xml_io)
+        self._plan_xml.write(xml_io)
         xml_io.seek(0)
         xml = xml_io.read()
         return xml
 
-    def create_user(self, user_id=None):
+    def create_user(self, user_id=None, screen_name=None):
         """ py:method: SpreedlySubscriptionXML.create_user(user_id=None)
         takes the create_user xml response and updates the user_id to the
         supplied ID.  No plan is associated and it is not an activated account
         if no `user_id` is supplied, then it will not be changed from that in
-        the xml.
+        the xml.  Same with screen_name
 
         :param user_id: id of the user the subscription will be using
         :return: XML for a subscription
@@ -68,6 +72,8 @@ class SpreedlySubscriptionXML(object):
         create_user_root = create_user_xml.find('.')
         if user_id:
             self._update_user_id(create_user_root, user_id)
+        if screen_name:
+            self._update_user_screenname(create_user_root, screen_name)
         xml_io = StringIO()
         create_user_xml.write(xml_io)
         xml_io.seek(0)

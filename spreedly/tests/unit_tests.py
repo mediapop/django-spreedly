@@ -1,63 +1,41 @@
+from StringIO import StringIO
+from datetime import datetime, timedelta
+import requests
+from mock import patch
+
+from spreedly.models import HttpUnprocessableEntity
+from spreedly.models import Plan, Fee, FeeGroup, Subscription
+from . helpers import SpreedlySubscriptionXML
+from mocks import get_client_mock, set_client_mock_returns
+
+import pyspreedly.api
+from pyspreedly.api import Client
+from pyspreedly.objectify import objectify_spreedly
+
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TestCase
-from pyspreedly.api import Client
-from spreedly.models import HttpUnprocessableEntity
-from spreedly.models import Plan, Fee, FeeGroup, Subscription
-from datetime import datetime, timedelta
-import requests
 from django.utils.unittest import skip
-from pyspreedly.objectify import objectify_spreedly
-import pyspreedly.api
-from . helpers import SpreedlySubscriptionXML
-from mock import patch
-from StringIO import StringIO
 
+ClientMock = get_client_mock(settings.SPREEDLY_SITE_NAME)
 
+@patch('pyspreedly.api.Client', new=ClientMock)
 class TestCaseSetup(TestCase):
     fixtures = ['plans', 'fees', 'sites']
-    def _setup_subscription_with_mock(self, status_code=200, plan=None, user=None):
-        sxml = SpreedlySubscriptionXML()
-        if not plan:
-            plan = self.plan
-        if not user:
-            user = self.user
-        xml = sxml.subscription_xml(plan.id, user.id)
-        with patch('requests.get') as response_get_mock:
-            with patch('requests.models.Response') as response_mock:
-                response_mock.status_code = status_code
-                response_mock.text = xml
-                response_get_mock.return_value = response_mock
-                self.subscription = Subscription.objects.get_or_create(
-                        user=user,
-                        plan=plan)
 
     def setUp(self):
-        self.spreedly_client = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
-        self.patcher = patch.object(Plan.objects, 'sync_plans')
-        self.mock_sync_plans = self.patcher.start()
-        self.mock_sync_plans.return_value = None
-        self.user = User.objects.create_user(username='test user',
-                email='test@mediapopinc.com',
-                password='testpassword')
-        self.trial_plan = Plan.objects.get(id=12345)
-        self.paid_plan = Plan.objects.get(id=67890)
-
-    def tearDown(self):
-        self.patcher.stop()
+        with patch('pyspreedly.api.Client', new_callable=ClientMock) as client_mock:
+            client_mock = set_client_mock_returns(client_mock)
+            self.spreedly_client = client_mock()
+            self.user = User.objects.create_user(username='test user',
+                    email='test@mediapopinc.com',
+                    password='testpassword')
+            self.trial_plan = Plan.objects.get(id=12345)
+            self.paid_plan = Plan.objects.get(id=67890)
 
 
 class TestSyncPlans(TestCase):
     fixtures = ['plans', 'fees', 'sites']
-    def setUp(self):
-        self.user = User.objects.create_user(username='test',
-                email='test@mediapopinc.com',
-                password='testpassword')
-        self.spreedly_client = Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
-
-    def tearDown(self):
-        # Remove all subscribers
-        self.spreedly_client.cleanup()
 
     def test_sync_plans(self):
         # Initial sync
@@ -75,42 +53,34 @@ class TestSyncPlans(TestCase):
                 self.assertEquals(qs.count(), spreedly_count)
 
 
+@patch('pyspreedly.api.Client', new=ClientMock)
 class TestPlan(TestCaseSetup):
     def test_trial_eligibility(self):
         """Plan should have a check for eligibility"""
+        from pyspreedly.api import Client
+        client_mock = set_client_mock_returns(Client)
         self.assertTrue(self.trial_plan.trial_eligible(self.user))
         self.assertFalse(self.paid_plan.trial_eligible(self.user))
 
     def test_start_trial(self):
         """A user should be able to start a free trial on an eligibile plan"""
-        sxml = SpreedlySubscriptionXML()
-        with patch.object(pyspreedly.api.Client, 'get_info') as mock_get_info:
-            with patch.object(pyspreedly.api.Client, 'create_subscriber') as mock_create_subscriber:
-                with patch.object(pyspreedly.api.Client, 'subscribe') as mock_subscribe:
-                    mock_get_info.side_effect = requests.HTTPError
-                    mock_create_subscriber.return_value = objectify_spreedly(sxml.create_user(self.user.id))
-                    mock_subscribe.return_value = objectify_spreedly(sxml.free_trial_response(12345, self.user.id))
-                    self.assertTrue(self.trial_plan.start_trial(self.user))
-        with patch.object(pyspreedly.api.Client, 'get_info') as mock_get_info:
-            with patch.object(pyspreedly.api.Client, 'create_subscriber') as mock_create_subscriber:
-                with patch.object(pyspreedly.api.Client, 'subscribe') as mock_subscribe:
-                    mock_get_info.side_effect = requests.HTTPError
-                    mock_create_subscriber.return_value = objectify_spreedly(sxml.create_user(self.user.id))
-                    mock_subscribe.side_effect = requests.HTTPError
-                    self.assertRaises(Plan.NotEligibile,self.paid_plan.start_trial,self.user)
+        from pyspreedly.api import Client
+        client_mock = set_client_mock_returns(Client)
+        client_mock.get_info.side_effect = requests.HTTPError
+        self.assertTrue(self.trial_plan.start_trial(self.user))
+
+        client_mock.get_info.side_effect = requests.HTTPError
+        self.assertRaises(Plan.NotEligibile,self.paid_plan.start_trial,self.user)
 
     def test_trial_eligibility_on_trial(self):
-        sxml = SpreedlySubscriptionXML()
-        with patch.object(pyspreedly.api.Client, 'get_info') as mock_get_info:
-            with patch.object(pyspreedly.api.Client, 'create_subscriber') as mock_create_subscriber:
-                with patch.object(pyspreedly.api.Client, 'subscribe') as mock_subscribe:
-                    mock_get_info.side_effect = requests.HTTPError
-                    mock_create_subscriber.return_value = objectify_spreedly(sxml.create_user(self.user.id))
-                    mock_subscribe.return_value = objectify_spreedly(sxml.free_trial_response(12345, self.user.id))
-                    self.trial_plan.start_trial(self.user)
-                    self.assertFalse(self.trial_plan.trial_eligible(self.user))
+        from pyspreedly.api import Client
+        client_mock = set_client_mock_returns(Client)
+        self.trial_plan.start_trial(self.user)
+        self.assertFalse(self.trial_plan.trial_eligible(self.user))
 
     def test_get_return_url(self):
+        from pyspreedly.api import Client
+        client_mock = set_client_mock_returns(Client)
         url = self.trial_plan.get_return_url(self.user)
         self.assertEquals(url, 'https://www.testsite.com/return/1/12345/')
 
