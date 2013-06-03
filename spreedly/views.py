@@ -190,7 +190,7 @@ class SubscriptionDetails(DetailView):
 
     @method_decorator(login_required)
     def dispatch(self, request, *args, **kwargs):
-        if not kwargs:
+        if not kwargs or not kwargs.get('user_id'):
             kwargs['user_id'] = request.user.id
         return super(SubscriptionDetails, self).dispatch(request, *args, **kwargs)
 
