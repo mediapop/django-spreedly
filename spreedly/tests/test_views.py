@@ -104,14 +104,18 @@ class TestViewsExist(ViewsSetup):
 
     def test_subscriber_view(self):
         """there should be a view to show a subscriber's info"""
-        url = reverse('subscription_details',
-                      kwargs={
-                          'user_id' : self.subscription.user.id})
+        url = reverse('subscription_details', kwargs={
+            'user_id': self.subscription.user.id
+        })
+
         response = self.client.get(url)
-        self.assertRedirects(response,reverse('login')+'?next=' + url)
-        self.client.login(username='root',password='secret')
+        self.assertRedirects(response, reverse('login') + '?next=' + url)
+
+        self.assertTrue(self.client.login(username=self.subscription.user,
+                                          password='testpassword'))
         response = self.client.get(url)
-        self.assertTemplateUsed(response,'spreedly/subscription_details.html')
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'spreedly/subscription_details.html')
 
     @skip("Not ready")
     def test_edit_subscriber(self):
