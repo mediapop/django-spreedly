@@ -3,6 +3,7 @@ from urlparse import urljoin
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.test.client import Client as DjClient
+from django.core.exceptions import SuspiciousOperation
 from django.core.urlresolvers import reverse
 from pyspreedly import api
 from spreedly.models import Plan, Subscription
@@ -64,18 +65,36 @@ class TestViewsExist(ViewsSetup):
 
     def test_spreedly_return(self):
         """The welcome back and thank you for your plastic page should also exist
-        (I need more caffine)"""
-        url = reverse('spreedly_return', kwargs={'user_id':1,'plan_pk':Plan.objects.all()[0].id})
+        """
+        user = User.objects.create_user(username='test user2',
+                email='test@mediapopinc.com',
+                password='testpassword')
+        url = reverse('spreedly_return',
+                      kwargs={'user_id':user.id,
+                              'plan_pk':Plan.objects.all()[0].id})
         response = self.client.get(url)
         self.assertTemplateUsed(response,'spreedly/return.html')
+
+    def test_spreedly_return_already_subscribed(self):
+        """The welcome back and thank you for your plastic page should also exist
+        """
+        url = reverse('spreedly_return',
+                      kwargs={'user_id':self.user.id,
+                              'plan_pk':Plan.objects.all()[0].id})
+        self.assertRaises(SuspiciousOperation, self.client.get, url)
 
     def test_my_subscription(self):
         """my subscription page should exisit, wrapper view."""
         url = reverse('my_subscription')
         response = self.client.get(url)
         self.assertRedirects(response,reverse('login')+'?next=' + url)
-        self.client.login(username='tester',password='secret')
+        self.assertTrue(
+            self.client.login(username=self.user, password='testpassword')
+        )
+        url = reverse('my_subscription')
         response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        import ipdb; ipdb.set_trace() ### XXX BREAKPOINT
         self.assertTemplateUsed(response,'spreedly/subscription_details.html')
 
     def test_plan_view(self):
