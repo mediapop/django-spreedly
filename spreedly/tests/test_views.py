@@ -94,7 +94,6 @@ class TestViewsExist(ViewsSetup):
         url = reverse('my_subscription')
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'spreedly/subscription_details.html')
 
     def test_plan_view(self):
         """There should be a view to show you a plan's details"""
