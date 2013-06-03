@@ -186,27 +186,13 @@ class SubscriptionDetails(DetailView):
     model = Subscription
     context_object_name = 'subscription'
     template_name = 'spreedly/subscription_details.html'
+    pk_url_kwarg = 'user_id'
 
     @method_decorator(login_required)
-    def dispatch(self, *args, **kwargs):
-        return super(SubscriptionDetails, self).dispatch(*args, **kwargs)
-
-    def get_object(self, queryset=None):
-        """
-        if you are admin - any subscription can be shown, else, only that
-        which is associated with you
-        """
-        try:
-            obj = super(SubscriptionDetails, self).get_object(queryset)
-        except AttributeError:
-            # Called w/o id, so return my subscription or 404
-            try:
-                return self.request.user.subscription
-            except Subscription.DoesNotExist:
-                return Http404(_(u"You have no subscriptions!"))
-        if obj.user != self.request.user and not self.request.user.is_staff():
-            raise SuspiciousOperation(_(u"That isn't yours"))
-        return obj
+    def dispatch(self, request, *args, **kwargs):
+        if not kwargs:
+            kwargs['user_id'] = request.user.id
+        return super(SubscriptionDetails, self).dispatch(request, *args, **kwargs)
 
 
 class PlanDetails(DetailView, SubscribeMixin):
