@@ -3,3 +3,4 @@ South==0.7.5
 path.py==2.2.2
 pytz>=2012f
 pyspreedly==2.0.1
+mock==1.0.1

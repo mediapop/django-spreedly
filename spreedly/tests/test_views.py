@@ -1,91 +1,41 @@
 from django.conf import settings
+from urlparse import urljoin
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.test.client import Client as DjClient
+from django.core.exceptions import SuspiciousOperation
 from django.core.urlresolvers import reverse
 from pyspreedly import api
 from spreedly.models import Plan, Subscription
 from django.utils.unittest import skip
 from . helpers import SpreedlySubscriptionXML
 from mock import patch
+from mocks import get_client_mock, set_client_mock_returns
 
 
+ClientMock = get_client_mock(settings.SPREEDLY_SITE_NAME)
+
+
+@patch('pyspreedly.api.Client', new_callable=ClientMock)
 class ViewsSetup(TestCase):
     fixtures = ['plans.json', 'fees.json']
-    def _setup_subscription_with_mock(self, status_code=200, plan=None, user=None):
-        sxml = SpreedlySubscriptionXML()
-        if not plan:
-            plan = self.plan
-        if not user:
-            user = self.user
-        xml = sxml.subscription_xml(plan.id, user.id)
-        with patch('requests.get') as response_get_mock:
-            with patch('requests.models.Response') as response_mock:
-                response_mock.status_code = status_code
-                response_mock.text = xml
-                response_get_mock.return_value = response_mock
-                self.subscription = Subscription.objects.get_or_create(
-                        user=user,
-                        plan=plan)
 
     def setUp(self):
-        self.spreedly_client = api.Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
-        self.spreedly_client.cleanup()
-        self.client = DjClient()
-        self.patcher = patch.object(Plan.objects, 'sync_plans')
-        self.mock_sync_plans = self.patcher.start()
-        self.mock_sync_plans.return_value = None
-        self.user = User.objects.create_user(username='test user',
-                email='test@mediapopinc.com',
-                password='testpassword')
-        self.trial_plan = Plan.objects.get(id=12345)
-        self.paid_plan = Plan.objects.get(id=67890)
-        self._setup_subscription_with_mock(plan=self.paid_plan)
+        with patch('pyspreedly.api.Client',
+                   new=ClientMock) as client_mock:
+            self.spreedly_client = client_mock()
+            self.user = User.objects.create_user(username='test user',
+                    email='test@mediapopinc.com',
+                    password='testpassword')
+            self.trial_plan = Plan.objects.get(id=12345)
+            self.paid_plan = Plan.objects.get(id=67890)
+            self.subscription = Subscription.objects.create(
+                    user=self.user,
+                    plan=self.paid_plan)
 
-    def tearDwon(self):
-        self.patcher.stop()
 
-class TestViewsExist(ViewsSetup):
-    def test_plan_list_view(self):
-        """(the poorly named) List view should show the plans, and a form."""
-        url = reverse('plan_list')
-        response = self.client.get(url)
-        self.assertTemplateUsed(response,'spreedly/plan_list.html')
 
-    def test_list_view(self):
-        """there should be a view which shows a list of plans - enabled and not"""
-        self.skipTest("Add real tests for this")
-        url = reverse('plan_list')  #Whu?
-        response = self.client.get(url)
-        self.assertTemplateUsed(response,'spreedly/plan_list.html')
-
-    def test_buy_view(self):
-        """there should be a view which sends you to spreedly for purchace"""
-        self.skipTest("Add real tests for this")
-        url = reverse('plan_list')  #Again??
-        response = self.client.get(url)
-        self.assertTemplateUsed(response,'spreedly/plan_list.html')
-
-    def test_email_set(self):
-        """Email sent view should also exist"""
-    def setUp(self):
-        self.spreedly_client = api.Client(settings.SPREEDLY_AUTH_TOKEN, settings.SPREEDLY_SITE_NAME)
-        self.spreedly_client.cleanup()
-        self.client = DjClient()
-        self.patcher = patch.object(Plan.objects, 'sync_plans')
-        self.mock_sync_plans = self.patcher.start()
-        self.mock_sync_plans.return_value = None
-        self.user = User.objects.create_user(username='test user',
-                email='test@mediapopinc.com',
-                password='testpassword')
-        import ipdb; ipdb.set_trace()  # BREAKPOINT
-        self.trial_plan = Plan.objects.get(id=12345)
-        self.paid_plan = Plan.objects.get(id=67890)
-        self._setup_subscription_with_mock(plan=self.paid_plan)
-
-    def tearDown(self):
-        self.patcher.stop()
-
+@patch('pyspreedly.api.Client', new=ClientMock)
 class TestViewsExist(ViewsSetup):
     def test_plan_list_view(self):
         """(the poorly named) List view should show the plans, and a form."""
@@ -115,30 +65,49 @@ class TestViewsExist(ViewsSetup):
 
     def test_spreedly_return(self):
         """The welcome back and thank you for your plastic page should also exist
-        (I need more caffine)"""
-        url = reverse('spreedly_return', kwargs={'user_id':1,'plan_pk':Plan.objects.all()[0].id})
+        """
+        user = User.objects.create_user(username='test user2',
+                email='test@mediapopinc.com',
+                password='testpassword')
+        url = reverse('spreedly_return',
+                      kwargs={'user_id':user.id,
+                              'plan_pk':Plan.objects.all()[0].id})
         response = self.client.get(url)
         self.assertTemplateUsed(response,'spreedly/return.html')
+
+    def test_spreedly_return_already_subscribed(self):
+        """The welcome back and thank you for your plastic page should also exist
+        """
+        url = reverse('spreedly_return',
+                      kwargs={'user_id':self.user.id,
+                              'plan_pk':Plan.objects.all()[0].id})
+        self.assertRaises(SuspiciousOperation, self.client.get, url)
 
     def test_my_subscription(self):
         """my subscription page should exisit, wrapper view."""
         url = reverse('my_subscription')
         response = self.client.get(url)
         self.assertRedirects(response,reverse('login')+'?next=' + url)
-        self.client.login(username='tester',password='secret')
+        self.assertTrue(
+            self.client.login(username=self.user, password='testpassword')
+        )
+        url = reverse('my_subscription')
         response = self.client.get(url)
-        self.assertTemplateUsed(response,'spreedly/subscription_details.html')
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'spreedly/subscription_details.html')
 
     def test_plan_view(self):
         """There should be a view to show you a plan's details"""
         url = reverse('plan_details',kwargs={'plan_pk':Plan.objects.all()[0].id})
         response = self.client.get(url)
-        self.assertTemplateUsed(response,'spreedly/plan_details.html')
-
+        self.assertEqual(response.status_code, 200)
+        #self.assertTemplateUsed(response, 'spreedly/plan_details.html')
 
     def test_subscriber_view(self):
         """there should be a view to show a subscriber's info"""
-        url = reverse('subscription_details',kwargs={'user_id':self.subscriber.user.id})
+        url = reverse('subscription_details',
+                      kwargs={
+                          'user_id' : self.subscription.user.id})
         response = self.client.get(url)
         self.assertRedirects(response,reverse('login')+'?next=' + url)
         self.client.login(username='root',password='secret')

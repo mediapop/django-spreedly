@@ -23,7 +23,7 @@ def run_tests():
     #TODO add some configuration here
 
     settings.configure(**DICT_CONF)
-    call_command("test", 'spreedly')
+    call_command("test", 'spreedly.TestViewsExist')
     sys.exit(0)
 
 def syncdb():
@@ -52,7 +52,7 @@ if __name__ == "__main__":
     parser.add_argument('--sql', action='store_true',
             help="run sql")
     schemamigration = parser.add_argument_group('migrate')
-    schemamigration.add_argument('--schemamigration', action='store_true', 
+    schemamigration.add_argument('--schemamigration', action='store_true',
             default=False, help="preform a schema migration")
     schema_migrate_opts = schemamigration.add_argument_group()
     schema_migrate_opts.add_argument('--auto',action='store_true')
