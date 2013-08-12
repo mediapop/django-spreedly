@@ -5,3 +5,7 @@ install:
   - python setup.py install
 script:
   - make test
+notifications:
+  email:
+    - dev@mediapop.co
+
