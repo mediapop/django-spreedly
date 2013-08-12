@@ -17,6 +17,7 @@ settings_local.py
 
 # setup stuff
 *.egg-info/*
+*.egg
 
 dist/*
 build/*
