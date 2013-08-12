@@ -28,4 +28,4 @@ This code is currently only tested on django trunk, but should work without issu
 Documentation
 ============
 
-Documentation is on [readthedocs.org](http://readthedocs.org/django-spreedly)
+Documentation is on [readthedocs.org](https://django-spreedly.readthedocs.org/en/latest/)
