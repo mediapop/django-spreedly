@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/mediapop/django-spreedly.png)](https://travis-ci.org/mediapop/django-spreedly.png)
+
 Info
 ====
 
@@ -26,6 +28,6 @@ This code is currently only tested on django trunk, but should work without issu
 * LOGIN_URL variable in your settings file
 
 Documentation
-============
+=============
 
 Documentation is on [readthedocs.org](https://django-spreedly.readthedocs.org/en/latest/)
