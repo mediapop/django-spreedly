@@ -18,16 +18,27 @@ The app currently covers:
 * disabling part of your site for non-subscribed users (optional)
 * redirecting users to the subscription page when their subscription expires.
 
-Requirements
+Installation
 ============
 
-This code is currently only tested on django trunk, but should work without issue on 1.1
+    pip install django-spreedly
 
-* python 2.5 
-* [pyspreedly](http://github.com/mediapop/python-spreedly) >=2.0 
-* LOGIN_URL variable in your settings file
+Have `LOGIN_URL` set in settings.py
+
+    LOGIN_URL = '/login'
 
 Documentation
 =============
 
 Documentation is on [readthedocs.org](https://django-spreedly.readthedocs.org/en/latest/)
+
+Contributing
+============
+
+    make develop
+
+Apply patches, write test, run tests.
+
+    make test
+
+Send pull request.
