@@ -12,7 +12,7 @@ from setuptools import setup, find_packages
 
 install_requires = [
     'path.py',
-    'django>=1.5,<1.6',
+    'django>=1.4,<1.6',
     'pytz',
     'pyspreedly',
 ]
